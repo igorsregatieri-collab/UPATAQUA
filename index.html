@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1d5a8f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Gestão da Saúde · UPA</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d5a8f'/%3E%3Cpath d='M32 16v32M16 32h32' stroke='%23fff' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d5a8f'/%3E%3Cpath d='M32 16v32M16 32h32' stroke='%23fff' stroke-width='9' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --ink:#14202b;--ink2:#34434f;--mute:#5e6d7b;--line:#dfe6ec;--line2:#eef2f6;
+  --bg:#f2f5f8;--card:#fff;--accent:#1d5a8f;--accent2:#143f66;--accent-soft:#e4edf6;
+  --ok:#15803d;--ok-soft:#dcfce7;--warn:#b45309;--warn-soft:#fef3c7;--bad:#b91c1c;--bad-soft:#fee2e2;
+  --r-verm:#dc2626;--r-lar:#f97316;--r-ama:#eab308;--r-verd:#16a34a;--r-azul:#2563eb;
+  --radius:12px;--sidebar:236px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Manrope,'IBM Plex Sans',sans-serif;margin:0;line-height:1.15}
+h1{font-size:24px;font-weight:800}h2{font-size:18px;font-weight:700}h3{font-size:15px;font-weight:700}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+.hidden{display:none!important}
+
+/* ---------- login ---------- */
+#login{min-height:100%;display:grid;grid-template-columns:1fr 1fr}
+#login .brand{background:var(--accent);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between}
+#login .brand .eyebrow{font-size:13px;font-weight:700;opacity:.85}
+#login .brand h1{font-size:40px;margin-top:10px}
+#login .brand p{font-size:17px;opacity:.92;max-width:380px}
+#login .brand ul{list-style:none;padding:0;margin:0;display:grid;gap:12px;font-size:15px}
+#login .brand li{display:flex;gap:12px;align-items:center}
+#login .brand li i{width:36px;height:36px;border-radius:9px;background:rgba(255,255,255,.14);display:grid;place-items:center;flex-shrink:0}
+#login .pane{display:grid;place-items:center;padding:40px 24px}
+#login form{width:100%;max-width:400px;display:grid;gap:16px}
+#login .tabs{display:flex;background:var(--line2);border-radius:10px;padding:4px;gap:4px}
+#login .tabs button{flex:1;height:38px;border-radius:8px;font-weight:600;color:var(--mute)}
+#login .tabs button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.field{display:grid;gap:5px}
+.field label{font-size:13px;font-weight:600;color:var(--ink2)}
+.field input,.field select,.field textarea{height:46px;padding:0 13px;border:1px solid #c9d3dc;border-radius:10px;background:#fff;width:100%}
+.field textarea{height:auto;min-height:96px;padding:11px 13px;resize:vertical;line-height:1.5}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);outline:0;box-shadow:0 0 0 3px rgba(29,90,143,.15)}
+.row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+.btn{height:44px;padding:0 16px;border-radius:10px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;white-space:nowrap}
+.btn.primary{background:var(--accent);color:#fff}.btn.primary:hover{background:var(--accent2)}
+.btn.ghost{background:#fff;border-color:#c9d3dc;color:var(--ink)}.btn.ghost:hover{background:var(--line2)}
+.btn.ok{background:var(--ok);color:#fff}.btn.danger{background:var(--bad);color:#fff}.btn.warn{background:var(--warn);color:#fff}
+.btn.sm{height:36px;padding:0 12px;font-size:13px}.btn.block{width:100%}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.hint{font-size:13px;color:var(--mute)}
+.err{background:var(--bad-soft);color:var(--bad);padding:10px 12px;border-radius:8px;font-size:14px}
+
+/* ---------- app shell ---------- */
+#app{display:grid;grid-template-columns:var(--sidebar) 1fr;min-height:100%}
+#side{background:#fff;border-right:1px solid var(--line);padding:18px 12px;display:flex;flex-direction:column;gap:20px;position:sticky;top:0;height:100vh}
+#side .logo{display:flex;gap:10px;align-items:center;padding:4px 8px}
+#side .logo i{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;flex-shrink:0}
+#side .logo b{font-family:Manrope;font-size:15px;display:block;line-height:1.1}
+#side .logo small{font-size:11px;color:var(--mute)}
+#nav{display:grid;gap:3px}
+#nav button{display:flex;align-items:center;gap:10px;height:42px;padding:0 12px;border-radius:9px;font-size:14px;font-weight:500;color:var(--ink2);text-align:left;width:100%}
+#nav button svg{flex-shrink:0;color:var(--mute)}
+#nav button.on{background:var(--accent-soft);color:var(--ink);font-weight:600}#nav button.on svg{color:var(--accent)}
+#nav button:hover:not(.on){background:var(--line2)}
+#nav .badge{margin-left:auto;background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;min-width:20px;text-align:center}
+#me{margin-top:auto;display:flex;gap:10px;align-items:center;padding:10px;border-radius:12px;background:var(--bg)}
+#me .av{width:34px;height:34px;border-radius:50%;background:#d9e6f2;color:var(--accent);display:grid;place-items:center;font-weight:700;font-size:13px;flex-shrink:0}
+#me b{font-size:13px;display:block;line-height:1.2}#me small{font-size:11px;color:var(--mute)}
+#top{height:60px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 22px;position:sticky;top:0;z-index:5}
+#top .search{flex:1;max-width:460px;height:40px;border:1px solid #c9d3dc;border-radius:10px;background:var(--bg);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--mute)}
+#top .search input{flex:1;border:0;background:transparent;outline:0;min-width:0}
+#top .spacer{flex:1}
+#top .sync{font-size:12px;color:var(--mute);display:flex;align-items:center;gap:6px;white-space:nowrap}
+#top .sync i{width:8px;height:8px;border-radius:50%;background:var(--ok)}#top .sync.off i{background:var(--warn)}
+#main{padding:22px;max-width:1500px;width:100%}
+.page-h{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+.page-h p{margin:4px 0 0;color:var(--mute);font-size:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius)}
+.card .hd{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}
+.card .bd{padding:18px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:18px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.kpi small{font-size:12px;color:var(--mute);font-weight:500}
+.kpi b{font-family:Manrope;font-size:28px;font-weight:800;display:block;line-height:1.1;margin:4px 0}
+.kpi span{font-size:12px;font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{height:36px;padding:0 13px;border-radius:999px;border:1px solid #c9d3dc;background:#fff;font-size:13px;font-weight:500;color:var(--ink2);display:inline-flex;align-items:center;gap:6px}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.tag{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:600;background:var(--line2);color:var(--ink2);white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.bad{background:var(--bad-soft);color:var(--bad)}.tag.acc{background:var(--accent-soft);color:var(--accent2)}
+.risk{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;letter-spacing:.02em}
+.risk.VERM{background:var(--r-verm)}.risk.LAR{background:var(--r-lar)}.risk.AMA{background:var(--r-ama);color:#3f2d00}.risk.VERD{background:var(--r-verd)}.risk.AZUL{background:var(--r-azul)}.risk.none{background:var(--line);color:var(--mute)}
+.list{display:grid}
+.item{display:flex;gap:14px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--line2)}
+.item:last-child{border-bottom:0}
+.item .who{flex:1;min-width:0}
+.item .who b{display:block;font-size:15px}
+.item .who small{color:var(--mute);font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .col{min-width:90px;font-size:13.5px}
+.item .wait{font-weight:700;font-size:14px;min-width:70px}
+.item .wait.late{color:var(--bad)}.item .wait.soon{color:var(--warn)}
+.empty{padding:40px 20px;text-align:center;color:var(--mute)}
+.empty b{display:block;color:var(--ink);margin-bottom:4px}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;overflow-x:auto}
+.tabs button{height:46px;padding:0 14px;font-weight:600;color:var(--mute);border-bottom:3px solid transparent;white-space:nowrap}
+.tabs button.on{color:var(--accent);border-color:var(--accent)}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+.pt-head{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.pt-head .risk{width:46px;height:46px;font-size:12px}
+.pt-head h1{font-size:21px}
+.pt-head .meta{color:var(--mute);font-size:13px}
+.vitals{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.vitals div{padding:9px 10px;border-radius:9px;background:var(--bg)}
+.vitals div.abn{background:var(--warn-soft)}.vitals div.abn b{color:var(--warn)}
+.vitals small{font-size:11px;color:var(--mute);font-weight:600;display:block}
+.vitals b{font-family:Manrope;font-size:17px;font-weight:800}
+.stack{display:grid;gap:10px}
+.tl{display:grid;gap:8px;font-size:13px}
+.tl div{display:flex;gap:10px}.tl span{color:var(--mute);min-width:44px;flex-shrink:0}
+.rx{padding:11px 13px;border:1px solid var(--line);border-radius:10px;display:flex;gap:10px;align-items:flex-start}
+.rx .t{flex:1;min-width:0}.rx .t b{display:block}.rx .t small{color:var(--mute);font-size:12.5px}
+.rx.done{opacity:.6}
+.beds{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.bed{border:1px solid var(--line);border-radius:10px;padding:11px;min-height:88px;background:#fff;text-align:left;width:100%;display:flex;flex-direction:column;gap:3px}
+.bed.free{background:#f0fdf4;border-style:dashed}.bed.busy{background:#fff7ed}.bed.mon{background:var(--bad-soft)}
+.bed small{font-size:11px;font-weight:700;color:var(--mute)}.bed b{font-size:14px}.bed em{font-style:normal;font-size:12px;color:var(--ink2)}
+table.tb{width:100%;border-collapse:collapse;font-size:14px}
+table.tb th{text-align:left;font-size:12px;color:var(--mute);font-weight:600;padding:10px 12px;border-bottom:1px solid var(--line)}
+table.tb td{padding:10px 12px;border-bottom:1px solid var(--line2);vertical-align:middle}
+.risk-pick{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.risk-pick button{border-radius:10px;padding:10px 6px;color:#fff;font-weight:700;font-size:13px;border:3px solid transparent;display:grid;gap:2px;text-align:center}
+.risk-pick button small{font-weight:500;font-size:11px;opacity:.9}
+.risk-pick button.on{border-color:var(--ink);box-shadow:0 0 0 2px #fff inset}
+.seg{display:flex;background:var(--line2);border-radius:10px;padding:4px;gap:4px}
+.seg button{flex:1;height:38px;border-radius:8px;font-weight:600;color:var(--mute);font-size:13px}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.qtpl{display:flex;gap:6px;flex-wrap:wrap}
+.qtpl button{height:32px;padding:0 11px;border:1px solid #c9d3dc;border-radius:999px;background:#fff;font-size:13px}
+.qtpl button:hover{background:var(--line2)}
+
+/* ---------- modal / toast ---------- */
+#modal{position:fixed;inset:0;background:rgba(20,32,43,.5);display:grid;place-items:center;padding:16px;z-index:50}
+#modal .box{background:#fff;border-radius:16px;width:100%;max-width:560px;max-height:92vh;overflow:auto;padding:22px}
+#modal .box.wide{max-width:800px}
+#modal .box h2{margin-bottom:14px}
+#modal .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;flex-wrap:wrap}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:10px;font-weight:600;font-size:14px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:90vw}
+#toast.bad{background:var(--bad)}#toast.ok{background:var(--ok)}
+
+/* ---------- mobile ---------- */
+#bottom{display:none}
+@media (max-width:900px){
+  #login{grid-template-columns:1fr}
+  #login .brand{padding:28px 24px;gap:20px}#login .brand h1{font-size:30px}#login .brand ul{display:none}
+  #app{grid-template-columns:1fr}
+  #side{display:none}
+  #top{padding:0 14px;height:56px}
+  #top .sync span{display:none}
+  #main{padding:14px 14px 90px}
+  .grid2{grid-template-columns:1fr}
+  .item{flex-wrap:wrap;padding:12px 14px}
+  .item .col{min-width:0}
+  #bottom{display:flex;position:fixed;bottom:0;left:0;right:0;height:calc(64px + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line);z-index:10;justify-content:space-around;align-items:center}
+  #bottom button{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:var(--mute);min-width:56px;padding:6px 0;position:relative}
+  #bottom button.on{color:var(--accent)}
+  #bottom .badge{position:absolute;top:0;right:4px;background:var(--bad);color:#fff;font-size:10px;padding:1px 5px;border-radius:999px;font-weight:700}
+  table.tb{font-size:13px}
+}
+@media (prefers-reduced-motion:no-preference){.btn,.chip,.bed{transition:background .12s,transform .08s}.btn:active{transform:scale(.98)}}
+@media print{#side,#top,#bottom,.no-print{display:none!important}#app{grid-template-columns:1fr}#main{padding:0}}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="login">
+  <div class="brand">
+    <div>
+      <div class="eyebrow" id="brandUnidadeTop">Unidade de Saúde</div>
+      <h1>Gestão da Saúde</h1>
+      <p>Um único acesso para recepção, enfermagem, médicos, técnicos e radiologia — no computador ou no celular.</p>
+    </div>
+    <ul>
+      <li><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg></i>Fila em tempo real em todas as telas</li>
+      <li><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/></svg></i>Tela inicial adaptada ao perfil de cada profissional</li>
+      <li><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></i>Rascunho do atendimento salvo automaticamente</li>
+    </ul>
+  </div>
+  <div class="pane">
+    <form id="loginForm" onsubmit="return false">
+      <div class="tabs"><button type="button" class="on" data-mode="entrar">Entrar</button><button type="button" data-mode="cadastrar">Criar conta</button></div>
+      <div id="loginErr" class="err hidden"></div>
+      <div class="field"><label for="lUser">Usuário</label><input id="lUser" autocomplete="username" autocapitalize="none" required></div>
+      <div class="field"><label for="lPass">Senha</label><input id="lPass" type="password" autocomplete="current-password" required></div>
+      <div id="cadExtra" class="hidden stack">
+        <div class="field"><label for="lNome">Nome completo</label><input id="lNome"></div>
+        <div class="row">
+          <div class="field"><label for="lPerfil">Perfil</label>
+            <select id="lPerfil"><option value="medico">Médico(a)</option><option value="enfermagem">Enfermeiro(a)</option><option value="tecnico">Técnico(a) de enfermagem</option><option value="radiologia">Radiologia</option><option value="recepcao">Recepção</option></select></div>
+          <div class="field"><label for="lReg">Registro (CRM/COREN)</label><input id="lReg" placeholder="opcional"></div>
+        </div>
+        <p class="hint" id="cadHint">O primeiro usuário cadastrado vira administrador da unidade. Os demais precisam ser aprovados por um administrador.</p>
+      </div>
+      <button class="btn primary block" id="loginBtn">Entrar</button>
+      <p class="hint" id="modeHint"></p>
+    </form>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="app" class="hidden">
+  <aside id="side">
+    <div class="logo"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></i><div><b>Gestão da Saúde</b><small id="sideUnidade">Unidade</small></div></div>
+    <nav id="nav"></nav>
+    <div id="me"><div class="av" id="meAv"></div><div style="flex:1;min-width:0"><b id="meNome"></b><small id="mePerfil"></small></div><button class="btn ghost sm" onclick="logout()" aria-label="Sair">Sair</button></div>
+  </aside>
+  <div>
+    <header id="top">
+      <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="busca" placeholder="Buscar paciente por nome, CNS ou CPF" oninput="onBusca(this.value)"></label>
+      <span class="spacer"></span>
+      <span class="sync" id="sync"><i></i><span>conectando…</span></span>
+      <button class="btn primary sm" onclick="modalEntrada()" id="btnEntrada"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="no-mobile">Nova entrada</span></button>
+    </header>
+    <main id="main"></main>
+  </div>
+  <nav id="bottom"></nav>
+</div>
+
+<div id="modal" class="hidden" onclick="if(event.target===this)closeModal()"><div class="box" id="modalBox"></div></div>
+<div id="toast" class="hidden"></div>
+
+<script>
+/* =====================================================================
+   CONFIGURAÇÃO — cole aqui a config do seu projeto Firebase.
+   Enquanto apiKey ficar como "COLE_AQUI", o app roda em MODO DEMO LOCAL
+   (dados só neste navegador, sincronizados entre abas).
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDbailvYopIK78pkJahpDYbUfADk1A_HHg",
+  authDomain: "upa-24htaqua.firebaseapp.com",
+  databaseURL: "https://upa-24htaqua-default-rtdb.firebaseio.com",
+  projectId: "upa-24htaqua",
+  storageBucket: "upa-24htaqua.firebasestorage.app",
+  messagingSenderId: "658022441156",
+  appId: "1:658022441156:web:c3d3e0fa98e562572f2991"
+};
+const UNIDADE_PADRAO = { codigo: "7429568", nome: "UPA 24 HORAS", cidade: "Taquaritinga · SP" };
+
+/* ---------- utilidades ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const now = () => Date.now();
+const uid = () => now().toString(36) + Math.random().toString(36).slice(2, 8);
+const fmtHora = t => t ? new Date(t).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '—';
+const fmtData = t => t ? new Date(t).toLocaleDateString('pt-BR') : '—';
+const fmtDH = t => t ? fmtData(t) + ' ' + fmtHora(t) : '—';
+const mins = t => t ? Math.max(0, Math.round((now() - t) / 60000)) : 0;
+const fmtMin = m => m < 60 ? m + ' min' : Math.floor(m/60) + 'h' + String(m%60).padStart(2,'0');
+const idade = nasc => { if (!nasc) return '—'; const d = new Date(nasc), n = new Date(); let a = n.getFullYear() - d.getFullYear(); if (n < new Date(n.getFullYear(), d.getMonth(), d.getDate())) a--; if (a < 2) { const m = (n.getFullYear()-d.getFullYear())*12 + n.getMonth()-d.getMonth(); return m + ' m'; } return a + ' a'; };
+const ini = n => (n||'?').split(' ').filter(Boolean).slice(0,2).map(p=>p[0]).join('').toUpperCase();
+const norm = s => (s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+async function sha(s){ const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join(''); }
+let toastT; function toast(msg, kind=''){ const t=$('#toast'); t.textContent=msg; t.className=kind; clearTimeout(toastT); toastT=setTimeout(()=>t.className='hidden',2600); }
+function openModal(html, wide){ $('#modalBox').innerHTML = html; $('#modalBox').className = 'box' + (wide?' wide':''); $('#modal').classList.remove('hidden'); const f=$('#modalBox').querySelector('input,select,textarea'); if(f) setTimeout(()=>f.focus(),50); }
+function closeModal(){ $('#modal').classList.add('hidden'); }
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeModal(); });
+
+/* ---------- constantes clínicas ---------- */
+const RISCOS = {
+  VERM: {n:'Vermelho', alvo:0,   desc:'Emergência'},
+  LAR:  {n:'Laranja',  alvo:10,  desc:'Muito urgente'},
+  AMA:  {n:'Amarelo',  alvo:60,  desc:'Urgente'},
+  VERD: {n:'Verde',    alvo:120, desc:'Pouco urgente'},
+  AZUL: {n:'Azul',     alvo:240, desc:'Não urgente'}
+};
+const ORDEM_RISCO = ['VERM','LAR','AMA','VERD','AZUL'];
+const PERFIS = { admin:'Administrador', medico:'Médico(a)', enfermagem:'Enfermeiro(a)', tecnico:'Técnico(a) de enfermagem', radiologia:'Radiologia', recepcao:'Recepção' };
+const STATUS = { triagem:'Aguard. triagem', fila:'Aguard. médico', atendimento:'Em atendimento', observacao:'Observação', reavaliacao:'Reavaliação', alta:'Alta', transferido:'Transferido', evadiu:'Evadiu', obito:'Óbito' };
+const VIAS = ['VO','EV','IM','SC','SL','Inalatória','Tópica','Retal','Ocular','Nasal'];
+const EXAMES = ['RX tórax PA/perfil','RX tórax PA','RX abdome','RX coluna lombar','RX coluna cervical','RX bacia','RX ombro','RX cotovelo','RX punho','RX mão','RX joelho','RX tornozelo','RX pé','RX crânio','RX seios da face','ECG','Glicemia capilar','Hemograma','PCR','Ureia/creatinina','Eletrólitos','Troponina','Urina I','Beta-HCG','Gasometria'];
+const TEMPLATES = {
+  'Dor torácica':'Paciente refere dor torácica em [aperto/pontada], iniciada há [tempo], [em repouso/aos esforços], com irradiação para [ ], associada a [sudorese/náusea/dispneia]. Nega episódio prévio.',
+  'Dispneia':'Paciente refere dispneia iniciada há [tempo], [progressiva/súbita], associada a [tosse/febre/dor torácica/edema MMII]. Antecedentes: [ ].',
+  'Dor abdominal':'Paciente refere dor abdominal em [localização], iniciada há [tempo], [tipo], intensidade [ /10], associada a [náusea/vômito/febre/alteração do hábito intestinal].',
+  'Febre':'Paciente refere febre há [tempo], aferida [ °C], associada a [ ]. Sem foco evidente / Foco: [ ].',
+  'Trauma':'Paciente vítima de [mecanismo] há [tempo]. Refere dor em [ ]. Nega perda de consciência / Nega uso de álcool. Deambulando: [sim/não].',
+  'Cefaleia':'Paciente refere cefaleia [localização], [tipo], iniciada há [tempo], intensidade [ /10], [pior da vida?], associada a [fotofobia/náusea/déficit].'
+};
+
+/* =====================================================================
+   BANCO DE DADOS — adaptador Firebase RTDB ou local (demo)
+   ===================================================================== */
+let DB;
+function makeLocalDB(){
+  const KEY = 'gsaude_demo_db';
+  let data = JSON.parse(localStorage.getItem(KEY) || '{}');
+  const subs = {};
+  const bc = ('BroadcastChannel' in window) ? new BroadcastChannel('gsaude') : null;
+  const get = p => p.split('/').filter(Boolean).reduce((o,k)=>o==null?undefined:o[k], data);
+  const setPath = (p, v) => { const ks = p.split('/').filter(Boolean); let o = data; ks.slice(0,-1).forEach(k=>{ if (typeof o[k]!=='object'||o[k]===null) o[k]={}; o=o[k]; }); if (v===null||v===undefined) delete o[ks.at(-1)]; else o[ks.at(-1)] = v; };
+  const persist = () => { localStorage.setItem(KEY, JSON.stringify(data)); bc && bc.postMessage('upd'); fire(); };
+  const fire = () => { Object.entries(subs).forEach(([p, cbs]) => cbs.forEach(cb => cb(structuredClone(get(p) ?? null)))); };
+  if (bc) bc.onmessage = () => { data = JSON.parse(localStorage.getItem(KEY)||'{}'); fire(); };
+  window.addEventListener('storage', e => { if (e.key===KEY){ data = JSON.parse(e.newValue||'{}'); fire(); } });
+  return {
+    local: true,
+    on(p, cb){ (subs[p] ||= []).push(cb); cb(structuredClone(get(p) ?? null)); return () => { subs[p] = subs[p].filter(x=>x!==cb); }; },
+    once: async p => structuredClone(get(p) ?? null),
+    set: async (p, v) => { setPath(p, v); persist(); },
+    update: async (p, obj) => { Object.entries(obj).forEach(([k,v]) => setPath(p + '/' + k, v)); persist(); },
+    push: async (p, v) => { const id = uid(); setPath(p + '/' + id, v); persist(); return id; },
+    remove: async p => { setPath(p, null); persist(); },
+    connected: cb => cb(true)
+  };
+}
+function makeFirebaseDB(){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.database();
+  const auth = firebase.auth();
+  return {
+    local: false,
+    auth,
+    on(p, cb){ const r = db.ref(p); const h = s => cb(s.val()); r.on('value', h); return () => r.off('value', h); },
+    once: async p => (await db.ref(p).once('value')).val(),
+    set: (p, v) => db.ref(p).set(v),
+    update: (p, obj) => db.ref(p).update(obj),
+    push: async (p, v) => { const r = db.ref(p).push(); await r.set(v); return r.key; },
+    remove: p => db.ref(p).remove(),
+    connected: cb => db.ref('.info/connected').on('value', s => cb(!!s.val()))
+  };
+}
+
+/* =====================================================================
+   ESTADO
+   ===================================================================== */
+const S = { me: null, usuarios: {}, pacientes: {}, config: null, view: 'painel', param: null, filtro: 'todos', busca: '', tab: {}, dirty: {} };
+let unsub = [];
+
+function boot(){
+  DB = (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'COLE_AQUI') ? makeFirebaseDB() : makeLocalDB();
+  DB.connected(ok => { const s=$('#sync'); s.className = 'sync' + (ok?'':' off'); s.querySelector('span').textContent = DB.local ? 'modo demo (local)' : (ok ? 'sincronizado' : 'sem conexão — salvando local'); });
+  DB.on('config', c => { S.config = c || null; const u = (S.config && S.config.unidade) || UNIDADE_PADRAO; $('#brandUnidadeTop').textContent = u.codigo + ' · ' + u.nome + ' — ' + (u.cidade||''); $('#sideUnidade').textContent = u.nome + ' · ' + u.codigo; });
+  DB.on('usuarios', u => { S.usuarios = u || {}; if (S.me && S.usuarios[S.me.id]) { S.me = {id:S.me.id, ...S.usuarios[S.me.id]}; if (!S.me.aprovado){ toast('Seu acesso ainda não foi aprovado'); logout(); return; } } if (S.view==='usuarios') render(); });
+  if (DB.local) {
+    $('#modeHint').textContent = 'Modo demo: os dados ficam só neste navegador. Cole a config do Firebase no arquivo para uso em rede.';
+    const sess = localStorage.getItem('gsaude_sess');
+    if (sess) DB.once('usuarios/'+sess).then(u => { if (u && u.aprovado) entrar({id:sess, ...u}); });
+  } else {
+    $('#modeHint').textContent = 'Login online seguro (Firebase). A senha precisa ter ao menos 6 caracteres.';
+    DB.auth.onAuthStateChanged(async user => {
+      if (!user) return;
+      const u = await DB.once('usuarios/'+user.uid);
+      if (!u) return;                       // acabou de criar conta; doCadastroFB conduz o fluxo
+      if (!u.aprovado) { toast('Seu acesso ainda não foi aprovado','bad'); DB.auth.signOut(); return; }
+      if (!S.me) entrar({id:user.uid, ...u});
+    });
+  }
+}
+
+/* =====================================================================
+   AUTENTICAÇÃO
+   ===================================================================== */
+let loginMode = 'entrar';
+document.querySelectorAll('#login .tabs button').forEach(b => b.onclick = () => { loginMode = b.dataset.mode; document.querySelectorAll('#login .tabs button').forEach(x=>x.classList.toggle('on', x===b)); $('#cadExtra').classList.toggle('hidden', loginMode!=='cadastrar'); $('#loginBtn').textContent = loginMode==='entrar' ? 'Entrar' : 'Criar conta'; $('#loginErr').classList.add('hidden'); $('#lPass').autocomplete = loginMode==='entrar'?'current-password':'new-password'; });
+$('#loginForm').addEventListener('submit', e => { e.preventDefault(); loginMode==='entrar' ? doLogin() : doCadastro(); });
+$('#loginBtn').onclick = () => loginMode==='entrar' ? doLogin() : doCadastro();
+function loginErr(m){ const e=$('#loginErr'); e.textContent=m; e.classList.remove('hidden'); }
+function doLogin(){ DB.local ? doLoginLocal() : doLoginFB(); }
+function doCadastro(){ DB.local ? doCadastroLocal() : doCadastroFB(); }
+const emailDe = u => u + '@upa.local';
+
+async function doLoginLocal(){
+  const user = norm($('#lUser').value.trim()), pass = $('#lPass').value;
+  if (!user || !pass) return loginErr('Informe usuário e senha.');
+  const us = await DB.once('usuarios') || {};
+  const ent = Object.entries(us).find(([id,u]) => u.usuario === user);
+  if (!ent) return loginErr('Usuário não encontrado.');
+  const [id, u] = ent;
+  if (u.senha !== await sha(pass)) return loginErr('Senha incorreta.');
+  if (!u.aprovado) return loginErr('Seu cadastro ainda não foi aprovado por um administrador.');
+  entrar({id, ...u});
+}
+async function doCadastroLocal(){
+  const user = norm($('#lUser').value.trim()), pass = $('#lPass').value, nome = $('#lNome').value.trim(), perfil = $('#lPerfil').value, reg = $('#lReg').value.trim();
+  if (user.length < 3) return loginErr('Usuário precisa ter pelo menos 3 caracteres.');
+  if (pass.length < 4) return loginErr('Senha precisa ter pelo menos 4 caracteres.');
+  if (!nome) return loginErr('Informe o nome completo.');
+  const us = await DB.once('usuarios') || {};
+  if (Object.values(us).some(u => u.usuario === user)) return loginErr('Esse usuário já existe.');
+  const primeiro = Object.keys(us).length === 0;
+  const novo = { usuario:user, senha: await sha(pass), nome, perfil, registro: reg, aprovado: primeiro, admin: primeiro, criadoEm: now() };
+  const id = await DB.push('usuarios', novo);
+  if (primeiro) { await DB.set('config/unidade', UNIDADE_PADRAO); toast('Conta criada — você é o administrador', 'ok'); entrar({id, ...novo}); }
+  else { loginErr('Cadastro enviado. Peça a um administrador para aprovar seu acesso.'); document.querySelector('#login .tabs button').click(); }
+}
+async function doLoginFB(){
+  const user = norm($('#lUser').value.trim()), pass = $('#lPass').value;
+  if (!user || !pass) return loginErr('Informe usuário e senha.');
+  $('#loginBtn').disabled = true;
+  try { await DB.auth.signInWithEmailAndPassword(emailDe(user), pass); }
+  catch(e){ loginErr(['auth/invalid-credential','auth/wrong-password','auth/user-not-found','auth/invalid-email'].includes(e.code) ? 'Usuário ou senha incorretos.' : e.message); }
+  $('#loginBtn').disabled = false;
+}
+async function doCadastroFB(){
+  const user = norm($('#lUser').value.trim()), pass = $('#lPass').value, nome = $('#lNome').value.trim(), perfil = $('#lPerfil').value, reg = $('#lReg').value.trim();
+  if (user.length < 3) return loginErr('Usuário precisa ter pelo menos 3 caracteres.');
+  if (!/^[a-z0-9._-]+$/.test(user)) return loginErr('Usuário só pode ter letras minúsculas, números, ponto, hífen ou sublinhado (sem espaços).');
+  if (pass.length < 6) return loginErr('Senha precisa ter pelo menos 6 caracteres.');
+  if (!nome) return loginErr('Informe o nome completo.');
+  $('#loginBtn').disabled = true;
+  try {
+    const cred = await DB.auth.createUserWithEmailAndPassword(emailDe(user), pass);
+    const existe = await DB.once('usuarios');
+    const primeiro = !existe || Object.keys(existe).length === 0;
+    const novo = { usuario:user, nome, perfil, registro:reg, aprovado:primeiro, admin:primeiro, criadoEm:now() };
+    await DB.set('usuarios/'+cred.user.uid, novo);
+    if (primeiro) { await DB.set('config/unidade', UNIDADE_PADRAO); toast('Conta criada — você é o administrador','ok'); entrar({id:cred.user.uid, ...novo}); }
+    else { await DB.auth.signOut(); loginErr('Cadastro enviado. Peça a um administrador para aprovar seu acesso.'); document.querySelector('#login .tabs button').click(); }
+  } catch(e){
+    loginErr(e.code==='auth/email-already-in-use' ? 'Esse usuário já existe.' : e.code==='auth/weak-password' ? 'Senha muito fraca (mín. 6 caracteres).' : e.code==='auth/operation-not-allowed' ? 'Ative "E-mail/senha" em Authentication no Firebase.' : e.message);
+  }
+  $('#loginBtn').disabled = false;
+}
+function entrar(u){
+  S.me = u; if (DB.local) localStorage.setItem('gsaude_sess', u.id);
+  $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
+  $('#meAv').textContent = ini(u.nome); $('#meNome').textContent = u.nome; $('#mePerfil').textContent = PERFIS[u.perfil] + (u.admin?' · admin':'');
+  unsub.forEach(f=>f()); unsub = [];
+  unsub.push(DB.on('pacientes', p => { S.pacientes = p || {}; render(); }));
+  S.view = homeDe(u.perfil); render();
+  setInterval(() => { if (['painel','fila','triagem','radiologia'].includes(S.view)) render(); }, 30000);
+}
+function logout(){ if (DB.local) localStorage.removeItem('gsaude_sess'); else if (DB.auth) DB.auth.signOut(); S.me=null; unsub.forEach(f=>f()); unsub=[]; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lPass').value=''; }
+function homeDe(p){ return ({medico:'fila', enfermagem:'triagem', tecnico:'medicacoes', radiologia:'radiologia', recepcao:'painel', admin:'painel'})[p] || 'painel'; }
+const can = (...perfis) => S.me && (S.me.admin || perfis.includes(S.me.perfil));
+
+/* =====================================================================
+   NAVEGAÇÃO
+   ===================================================================== */
+const I = {
+  painel:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>',
+  fila:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M16 21a6 6 0 0 0-12 0"/><circle cx="10" cy="9" r="4"/><path d="M21 21a6 6 0 0 0-4-5.6M16 5a4 4 0 0 1 0 8"/></svg>',
+  triagem:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>',
+  med:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 3h4l1 4h4l-7 14H8L5 7h4z"/></svg>',
+  obs:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10v9h18v-9M3 10l9-6 9 6M12 12v5M9.5 14.5h5"/></svg>',
+  rx:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+  users:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M22 11h-6"/></svg>',
+  hist:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 3"/></svg>',
+  rel:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>'
+};
+function menu(){
+  const p = S.me.perfil, a = S.me.admin;
+  const P = Object.values(S.pacientes);
+  const n = st => P.filter(x=>x.status===st).length;
+  const nMed = P.filter(x=>['atendimento','observacao','reavaliacao'].includes(x.status)).reduce((s,x)=>s+Object.values(x.prescricoes||{}).filter(r=>r.status==='pendente').length,0);
+  const nRx = P.reduce((s,x)=>s+Object.values(x.exames||{}).filter(e=>e.status!=='liberado').length,0);
+  const items = [
+    {id:'painel', t:'Painel da unidade', i:I.painel, show:true},
+    {id:'fila', t:'Fila médica', i:I.fila, badge:n('fila')+n('reavaliacao'), show:a||['medico','enfermagem','recepcao'].includes(p)},
+    {id:'triagem', t:'Triagem', i:I.triagem, badge:n('triagem'), show:a||['enfermagem','tecnico','recepcao'].includes(p)},
+    {id:'medicacoes', t:'Medicações', i:I.med, badge:nMed, show:a||['enfermagem','tecnico','medico'].includes(p)},
+    {id:'observacao', t:'Observação / leitos', i:I.obs, badge:n('observacao'), show:true},
+    {id:'radiologia', t:'Exames e imagem', i:I.rx, badge:nRx, show:a||['radiologia','medico','enfermagem','tecnico'].includes(p)},
+    {id:'historico', t:'Histórico do dia', i:I.hist, show:true},
+    {id:'relatorio', t:'Relatórios', i:I.rel, show:a||p==='medico'||p==='enfermagem'},
+    {id:'usuarios', t:'Usuários', i:I.users, badge:Object.values(S.usuarios).filter(u=>!u.aprovado).length, show:a}
+  ].filter(x=>x.show);
+  $('#nav').innerHTML = items.map(x=>`<button class="${S.view===x.id?'on':''}" onclick="go('${x.id}')">${x.i}${x.t}${x.badge?`<span class="badge">${x.badge}</span>`:''}</button>`).join('');
+  const mob = items.slice(0,4).concat([{id:'mais', t:'Mais', i:'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>'}]);
+  $('#bottom').innerHTML = mob.map(x=>`<button class="${S.view===x.id?'on':''}" onclick="${x.id==='mais'?'modalMais()':`go('${x.id}')`}">${x.i.replace(/width="18" height="18"/,'width="22" height="22"')}${x.t.split(' ')[0]}${x.badge?`<span class="badge">${x.badge}</span>`:''}</button>`).join('');
+}
+function modalMais(){
+  const p=S.me.perfil,a=S.me.admin;
+  const all=[['painel','Painel da unidade'],['fila','Fila médica'],['triagem','Triagem'],['medicacoes','Medicações'],['observacao','Observação / leitos'],['radiologia','Exames e imagem'],['historico','Histórico do dia'],['relatorio','Relatórios']].concat(a?[['usuarios','Usuários']]:[]);
+  openModal(`<h2>Menu</h2><div class="stack">${all.map(([id,t])=>`<button class="btn ghost block" style="justify-content:flex-start" onclick="closeModal();go('${id}')">${t}</button>`).join('')}<button class="btn danger block" onclick="closeModal();logout()">Sair (${esc(S.me.nome)})</button></div>`);
+}
+function go(v, param){ S.view = v; S.param = param ?? null; window.scrollTo(0,0); render(); }
+function onBusca(v){ S.busca = v; if (v && S.view!=='busca') { S.view='busca'; } if (!v && S.view==='busca') S.view = homeDe(S.me.perfil); render(); }
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function render(){
+  if (!S.me) return;
+  menu();
+  const m = $('#main');
+  const V = { painel:vPainel, fila:vFila, triagem:vTriagem, medicacoes:vMedicacoes, observacao:vObservacao, radiologia:vRadiologia, historico:vHistorico, relatorio:vRelatorio, usuarios:vUsuarios, paciente:vPaciente, busca:vBusca };
+  m.innerHTML = (V[S.view] || vPainel)();
+  if (S.view==='paciente') afterPaciente();
+}
+const pacs = () => Object.entries(S.pacientes).map(([id,p])=>({id,...p}));
+const ativos = () => pacs().filter(p=>!['alta','transferido','evadiu','obito'].includes(p.status));
+const hoje = () => { const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); };
+function ordFila(a,b){ const ra = ORDEM_RISCO.indexOf(a.risco), rb = ORDEM_RISCO.indexOf(b.risco); if ((ra<0?9:ra)!==(rb<0?9:rb)) return (ra<0?9:ra)-(rb<0?9:rb); return (a.chegada||0)-(b.chegada||0); }
+function waitClass(p){ const m = mins(p.chegada), alvo = p.risco ? RISCOS[p.risco].alvo : 30; if (m > alvo) return 'late'; if (m > alvo*0.7) return 'soon'; return ''; }
+function itemPac(p, extra=''){
+  return `<div class="item">
+    <span class="risk ${p.risco||'none'}">${p.risco||'—'}</span>
+    <div class="who"><b>${esc(p.nome)}</b><small>${idade(p.nasc)} · ${p.sexo||'—'}${p.cns?' · CNS '+esc(p.cns):''} · chegou ${fmtHora(p.chegada)}${p.queixa?' · '+esc(p.queixa):''}</small></div>
+    <span class="wait ${waitClass(p)}">${fmtMin(mins(p.chegada))}</span>
+    <span class="tag ${p.status==='atendimento'?'acc':''}">${STATUS[p.status]||p.status}${p.leito?' · L'+p.leito:''}</span>
+    ${extra}
+    <button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button>
+  </div>`;
+}
+const vazio = (t, s) => `<div class="empty"><b>${t}</b>${s||''}</div>`;
+
+/* ---------- painel ---------- */
+function vPainel(){
+  const A = ativos(), H = pacs().filter(p=>p.chegada>=hoje());
+  const n = st => A.filter(p=>p.status===st).length;
+  const esperas = A.filter(p=>p.status==='fila').map(p=>mins(p.chegada));
+  const tm = esperas.length ? Math.round(esperas.reduce((a,b)=>a+b,0)/esperas.length) : 0;
+  const atras = A.filter(p=>p.status==='fila' && waitClass(p)==='late').length;
+  const porRisco = ORDEM_RISCO.map(r=>`<span class="tag" style="background:${getComputedStyle(document.documentElement).getPropertyValue('--r-'+r.toLowerCase().replace('verm','verm').replace('verd','verd'))};color:#fff">${RISCOS[r].n} ${A.filter(p=>p.risco===r).length}</span>`).join(' ');
+  return `<div class="page-h"><div><h1>Painel da unidade</h1><p>${fmtData(now())} · ${H.length} entradas hoje · ${A.length} pacientes na unidade agora</p></div><div class="chips">${porRisco}</div></div>
+  <div class="kpis">
+    <div class="kpi"><small>Aguardando triagem</small><b>${n('triagem')}</b><span style="color:var(--mute)">recepção → enfermagem</span></div>
+    <div class="kpi"><small>Aguardando médico</small><b>${n('fila')+n('reavaliacao')}</b><span style="color:${atras?'var(--bad)':'var(--ok)'}">${atras?atras+' acima do tempo-alvo':'todos dentro da meta'}</span></div>
+    <div class="kpi"><small>Em atendimento</small><b>${n('atendimento')}</b><span style="color:var(--mute)">${[...new Set(A.filter(p=>p.status==='atendimento').map(p=>p.medicoNome))].length} médico(s)</span></div>
+    <div class="kpi"><small>Tempo médio de espera</small><b>${fmtMin(tm)}</b><span style="color:var(--mute)">para consulta médica</span></div>
+    <div class="kpi"><small>Em observação</small><b>${n('observacao')}</b><span style="color:var(--mute)">${leitosLivres()} leito(s) livre(s)</span></div>
+    <div class="kpi"><small>Altas hoje</small><b>${H.filter(p=>p.status==='alta').length}</b><span style="color:var(--mute)">${H.filter(p=>p.status==='transferido').length} transferência(s)</span></div>
+  </div>
+  <div class="card"><div class="hd"><h2>Pacientes na unidade</h2><span class="hint">${A.length}</span></div><div class="list">${A.sort(ordFila).map(p=>itemPac(p)).join('') || vazio('Nenhum paciente na unidade','Use "Nova entrada" para registrar a chegada.')}</div></div>`;
+}
+
+/* ---------- fila médica ---------- */
+function vFila(){
+  let A = ativos().filter(p=>['fila','reavaliacao','atendimento'].includes(p.status));
+  if (S.filtro==='meus') A = A.filter(p=>p.medicoId===S.me.id);
+  if (S.filtro==='reav') A = A.filter(p=>p.status==='reavaliacao');
+  A.sort(ordFila);
+  const btn = p => can('medico') ? (p.status==='atendimento' ? `<button class="btn primary sm" onclick="go('paciente','${p.id}')">Continuar</button>` : `<button class="btn primary sm" onclick="iniciarAtend('${p.id}')">Atender</button>`) : '';
+  return `<div class="page-h"><div><h1>Fila médica</h1><p>Ordenada por classificação de risco e horário de chegada</p></div>
+  <div class="chips"><button class="chip ${S.filtro==='todos'?'on':''}" onclick="S.filtro='todos';render()">Todos</button><button class="chip ${S.filtro==='meus'?'on':''}" onclick="S.filtro='meus';render()">Meus pacientes</button><button class="chip ${S.filtro==='reav'?'on':''}" onclick="S.filtro='reav';render()">Reavaliação</button></div></div>
+  <div class="card"><div class="list">${A.map(p=>itemPac(p, btn(p))).join('') || vazio('Fila vazia','Nenhum paciente aguardando consulta.')}</div></div>`;
+}
+async function iniciarAtend(id){
+  const p = S.pacientes[id]; if (!p) return;
+  if (p.status==='atendimento' && p.medicoId && p.medicoId!==S.me.id && !confirm(`Este paciente está em atendimento com ${p.medicoNome}. Assumir?`)) return;
+  await DB.update('pacientes/'+id, { status:'atendimento', medicoId:S.me.id, medicoNome:S.me.nome, inicioAtend: p.inicioAtend || now() });
+  await evento(id, 'Início do atendimento médico — ' + S.me.nome);
+  go('paciente', id);
+}
+async function evento(id, texto){ await DB.push('pacientes/'+id+'/eventos', { t: now(), texto, por: S.me.nome }); }
+
+/* ---------- triagem ---------- */
+function vTriagem(){
+  const A = ativos().filter(p=>p.status==='triagem').sort((a,b)=>(a.chegada||0)-(b.chegada||0));
+  const T = ativos().filter(p=>p.status!=='triagem' && p.triagem).sort((a,b)=>(b.triagem.t||0)-(a.triagem.t||0)).slice(0,8);
+  return `<div class="page-h"><div><h1>Triagem</h1><p>Classificação de risco (Manchester) e sinais vitais</p></div><button class="btn primary" onclick="modalEntrada()">Nova entrada</button></div>
+  <div class="card" style="margin-bottom:18px"><div class="hd"><h2>Aguardando triagem</h2><span class="hint">${A.length}</span></div><div class="list">${A.map(p=>itemPac(p, can('enfermagem','tecnico') ? `<button class="btn primary sm" onclick="modalTriagem('${p.id}')">Triar</button>`:'')).join('') || vazio('Ninguém aguardando triagem')}</div></div>
+  <div class="card"><div class="hd"><h2>Triados recentemente</h2></div><div class="list">${T.map(p=>itemPac(p, `<button class="btn ghost sm" onclick="modalTriagem('${p.id}')">Reclassificar</button>`)).join('') || vazio('Nenhuma triagem registrada')}</div></div>`;
+}
+function modalTriagem(id){
+  const p = S.pacientes[id], t = p.triagem || {};
+  openModal(`<h2>Triagem — ${esc(p.nome)}</h2><p class="hint" style="margin:-8px 0 14px">${idade(p.nasc)} · ${p.sexo||''} · chegou ${fmtHora(p.chegada)}</p>
+  <div class="stack">
+    <div class="field"><label for="tQueixa">Queixa principal</label><input id="tQueixa" value="${esc(p.queixa||'')}"></div>
+    <div class="row">
+      <div class="field"><label for="tPA">PA (mmHg)</label><input id="tPA" placeholder="120/80" value="${esc(t.pa||'')}" inputmode="numeric"></div>
+      <div class="field"><label for="tFC">FC (bpm)</label><input id="tFC" value="${esc(t.fc||'')}" inputmode="numeric"></div>
+      <div class="field"><label for="tFR">FR (irpm)</label><input id="tFR" value="${esc(t.fr||'')}" inputmode="numeric"></div>
+      <div class="field"><label for="tSat">SpO₂ (%)</label><input id="tSat" value="${esc(t.sat||'')}" inputmode="numeric"></div>
+      <div class="field"><label for="tTemp">Temp (°C)</label><input id="tTemp" value="${esc(t.temp||'')}" inputmode="decimal"></div>
+      <div class="field"><label for="tGli">Glicemia</label><input id="tGli" value="${esc(t.gli||'')}" inputmode="numeric"></div>
+      <div class="field"><label for="tDor">Dor (0-10)</label><input id="tDor" value="${esc(t.dor||'')}" inputmode="numeric"></div>
+      <div class="field"><label for="tPeso">Peso (kg)</label><input id="tPeso" value="${esc(t.peso||'')}" inputmode="decimal"></div>
+    </div>
+    <div class="field"><label for="tAlerg">Alergias</label><input id="tAlerg" value="${esc(p.alergias||'')}" placeholder="nenhuma conhecida"></div>
+    <div class="field"><label for="tObs">Observações da enfermagem</label><textarea id="tObs">${esc(t.obs||'')}</textarea></div>
+    <div class="field"><label>Classificação de risco</label>
+      <div class="risk-pick">${ORDEM_RISCO.map(r=>`<button type="button" class="risk-pick-btn ${(t.risco||p.risco)===r?'on':''}" data-r="${r}" style="background:var(--r-${r.toLowerCase()})${r==='AMA'?';color:#3f2d00':''}" onclick="document.querySelectorAll('.risk-pick-btn').forEach(b=>b.classList.toggle('on',b===this))">${RISCOS[r].n}<small>${RISCOS[r].alvo?'até '+RISCOS[r].alvo+' min':'imediato'}</small></button>`).join('')}</div></div>
+    <div class="field"><label><input type="checkbox" id="tProt" ${t.protocolo?'checked':''}> Acionar protocolo (dor torácica / AVC / sepse) — avisa o médico</label></div>
+  </div>
+  <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarTriagem('${id}')">Salvar triagem</button></div>`);
+}
+async function salvarTriagem(id){
+  const r = document.querySelector('.risk-pick-btn.on'); if (!r) return toast('Escolha a classificação de risco','bad');
+  const g = i => $('#'+i).value.trim();
+  const tri = { t:now(), por:S.me.nome, risco:r.dataset.r, pa:g('tPA'), fc:g('tFC'), fr:g('tFR'), sat:g('tSat'), temp:g('tTemp'), gli:g('tGli'), dor:g('tDor'), peso:g('tPeso'), obs:g('tObs'), protocolo:$('#tProt').checked };
+  const p = S.pacientes[id];
+  const upd = { triagem: tri, risco: tri.risco, queixa: g('tQueixa'), alergias: g('tAlerg') };
+  if (p.status==='triagem') upd.status = tri.risco==='VERM' ? 'fila' : 'fila';
+  await DB.update('pacientes/'+id, upd);
+  await evento(id, `Triagem: ${RISCOS[tri.risco].n}${tri.protocolo?' · protocolo acionado':''} — ${S.me.nome}`);
+  closeModal(); toast('Triagem salva','ok');
+}
+
+/* ---------- entrada / recepção ---------- */
+function modalEntrada(pre){
+  pre = pre || {};
+  openModal(`<h2>Nova entrada</h2>
+  <div class="stack">
+    <div class="field"><label for="eNome">Nome completo</label><input id="eNome" value="${esc(pre.nome||'')}" autocapitalize="words"></div>
+    <div class="row">
+      <div class="field"><label for="eNasc">Nascimento</label><input id="eNasc" type="date" value="${esc(pre.nasc||'')}"></div>
+      <div class="field"><label for="eSexo">Sexo</label><select id="eSexo"><option ${pre.sexo==='F'?'selected':''}>F</option><option ${pre.sexo==='M'?'selected':''}>M</option><option ${pre.sexo==='Outro'?'selected':''}>Outro</option></select></div>
+    </div>
+    <div class="row">
+      <div class="field"><label for="eCNS">CNS</label><input id="eCNS" inputmode="numeric" value="${esc(pre.cns||'')}"></div>
+      <div class="field"><label for="eCPF">CPF</label><input id="eCPF" inputmode="numeric" value="${esc(pre.cpf||'')}"></div>
+      <div class="field"><label for="eTel">Telefone</label><input id="eTel" inputmode="tel" value="${esc(pre.telefone||'')}"></div>
+    </div>
+    <div class="field"><label for="eMae">Nome da mãe</label><input id="eMae" value="${esc(pre.mae||'')}"></div>
+    <div class="field"><label for="eQueixa">Motivo da procura</label><input id="eQueixa" placeholder="ex.: dor no peito, febre, queda"></div>
+    <div class="field"><label for="eAlerg">Alergias conhecidas</label><input id="eAlerg" value="${esc(pre.alergias||'')}"></div>
+    <div class="field"><label><input type="checkbox" id="eUrg"> Chegou em situação de emergência (vai direto para o médico como vermelho)</label></div>
+  </div>
+  <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarEntrada()">Registrar chegada</button></div>`);
+}
+async function salvarEntrada(){
+  const g = i => $('#'+i).value.trim();
+  const nome = g('eNome'); if (nome.length < 3) return toast('Informe o nome do paciente','bad');
+  const dup = ativos().find(p => norm(p.nome)===norm(nome));
+  if (dup && !confirm(`${dup.nome} já está na unidade (${STATUS[dup.status]}). Registrar mesmo assim?`)) return;
+  const urg = $('#eUrg').checked;
+  const p = { nome, nasc:g('eNasc'), sexo:$('#eSexo').value, cns:g('eCNS'), cpf:g('eCPF'), telefone:g('eTel'), mae:g('eMae'), queixa:g('eQueixa'), alergias:g('eAlerg'), chegada:now(), status: urg?'fila':'triagem', risco: urg?'VERM':null, recepcaoPor:S.me.nome };
+  const id = await DB.push('pacientes', p);
+  await evento(id, 'Chegada registrada' + (urg?' — EMERGÊNCIA':'') + ' — ' + S.me.nome);
+  closeModal(); toast('Entrada registrada','ok');
+  if (urg) go('fila');
+}
+
+/* ---------- ficha do paciente / atendimento ---------- */
+function vPaciente(){
+  const id = S.param, p = S.pacientes[id]; if (!p) return vazio('Paciente não encontrado');
+  const t = p.triagem || {}, tab = S.tab[id] || 'anamnese';
+  const meu = p.medicoId===S.me.id;
+  const finalizado = ['alta','transferido','evadiu','obito'].includes(p.status);
+  const abn = (k,v) => { v=parseFloat(String(v).replace(',','.')); if(isNaN(v)) return ''; return ({fc:v>100||v<50, fr:v>20||v<10, sat:v<94, temp:v>=37.8||v<35, gli:v>180||v<70, dor:v>=7})[k] ? 'abn':''; };
+  const paAbn = () => { const m=(t.pa||'').match(/(\d+)\D+(\d+)/); return m && (+m[1]>=140||+m[2]>=90||+m[1]<90) ? 'abn':''; };
+  const evs = Object.values(p.eventos||{}).sort((a,b)=>a.t-b.t);
+  const tabs = [['anamnese','Atendimento'],['prescricao','Prescrição'],['exames','Exames'],['evolucao','Evoluções'],['dados','Cadastro']];
+  return `<div class="page-h" style="margin-bottom:12px"><button class="btn ghost sm" onclick="history.length>1?go(homeDe(S.me.perfil)):go('painel')">‹ Voltar</button>
+    <span class="tag ${p.status==='atendimento'?'acc':''}">${STATUS[p.status]}${p.medicoNome?' · '+esc(p.medicoNome):''}</span><span class="spacer" style="flex:1"></span>
+    ${!finalizado && can('medico') ? (p.status!=='atendimento' || !meu ? `<button class="btn primary sm" onclick="iniciarAtend('${id}')">${p.status==='atendimento'?'Assumir atendimento':'Iniciar atendimento'}</button>` : `<button class="btn ok sm" onclick="modalConduta('${id}')">Definir conduta / finalizar</button>`) : ''}
+    ${!finalizado && can('enfermagem','tecnico') ? `<button class="btn ghost sm" onclick="modalTriagem('${id}')">${p.triagem?'Reclassificar':'Triar'}</button>`:''}
+    ${finalizado && S.me.admin ? `<button class="btn ghost sm" onclick="reabrir('${id}')">Reabrir</button>`:''}
+    <button class="btn ghost sm" onclick="window.print()">Imprimir</button></div>
+  <div class="card" style="margin-bottom:16px"><div class="bd pt-head">
+    <span class="risk ${p.risco||'none'}">${p.risco||'—'}</span>
+    <div style="flex:1;min-width:200px"><h1>${esc(p.nome)}</h1><div class="meta">${idade(p.nasc)} · ${p.sexo||'—'} · nasc. ${p.nasc?fmtData(new Date(p.nasc+'T12:00')):'—'}${p.cns?' · CNS '+esc(p.cns):''} · chegada ${fmtDH(p.chegada)} · espera ${fmtMin(mins(p.chegada))}${p.leito?' · Leito '+p.leito:''}</div></div>
+    <div class="chips">${p.alergias && norm(p.alergias)!=='nenhuma' ? `<span class="tag bad">Alergia: ${esc(p.alergias)}</span>`:'<span class="tag ok">Sem alergias registradas</span>'}${t.protocolo?'<span class="tag warn">Protocolo acionado</span>':''}${p.queixa?`<span class="tag">${esc(p.queixa)}</span>`:''}</div>
+  </div></div>
+  <div class="grid2">
+    <div class="card">
+      <div class="tabs">${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="S.tab['${id}']='${k}';render()">${l}</button>`).join('')}</div>
+      <div class="bd">${({anamnese:tabAnamnese, prescricao:tabPrescricao, exames:tabExames, evolucao:tabEvolucao, dados:tabDados})[tab](p,id)}</div>
+    </div>
+    <div class="stack">
+      <div class="card"><div class="hd"><h3>Sinais vitais</h3><span class="hint">${t.t?'triagem '+fmtHora(t.t):'sem triagem'}</span></div><div class="bd vitals">
+        <div class="${paAbn()}"><small>PA</small><b>${esc(t.pa||'—')}</b></div><div class="${abn('fc',t.fc)}"><small>FC</small><b>${esc(t.fc||'—')}</b></div><div class="${abn('sat',t.sat)}"><small>SpO₂</small><b>${t.sat?esc(t.sat)+'%':'—'}</b></div>
+        <div class="${abn('temp',t.temp)}"><small>Temp</small><b>${esc(t.temp||'—')}</b></div><div class="${abn('fr',t.fr)}"><small>FR</small><b>${esc(t.fr||'—')}</b></div><div class="${abn('gli',t.gli)}"><small>Glicemia</small><b>${esc(t.gli||'—')}</b></div>
+        <div class="${abn('dor',t.dor)}"><small>Dor</small><b>${t.dor?esc(t.dor)+'/10':'—'}</b></div><div><small>Peso</small><b>${t.peso?esc(t.peso)+' kg':'—'}</b></div><div><small>Risco</small><b>${p.risco?RISCOS[p.risco].n:'—'}</b></div>
+      </div>${t.obs?`<div class="bd" style="padding-top:0;font-size:13.5px;color:var(--ink2)"><b>Enfermagem:</b> ${esc(t.obs)}</div>`:''}</div>
+      ${!finalizado && can('medico','enfermagem','tecnico') ? `<div class="card"><div class="hd"><h3>Ações rápidas</h3></div><div class="bd stack">
+        ${can('medico')?`<button class="btn ghost" style="justify-content:space-between" onclick="S.tab['${id}']='prescricao';render();setTimeout(()=>$('#rxDroga')&&$('#rxDroga').focus(),50)">Prescrever medicação <span>›</span></button>
+        <button class="btn ghost" style="justify-content:space-between" onclick="S.tab['${id}']='exames';render()">Solicitar exame / RX <span>›</span></button>`:''}
+        <button class="btn ghost" style="justify-content:space-between" onclick="modalLeito('${id}')">${p.leito?'Trocar / liberar leito':'Colocar em observação (leito)'} <span>›</span></button>
+        ${can('medico')?`<button class="btn ghost" style="justify-content:space-between" onclick="S.tab['${id}']='evolucao';render();setTimeout(()=>$('#evTexto')&&$('#evTexto').focus(),50)">Registrar evolução <span>›</span></button>
+        <button class="btn primary" onclick="modalConduta('${id}')">Definir conduta / finalizar</button>`:''}
+      </div></div>`:''}
+      <div class="card"><div class="hd"><h3>Linha do tempo</h3></div><div class="bd tl">${evs.map(e=>`<div><span>${fmtHora(e.t)}</span><div>${esc(e.texto)}</div></div>`).join('')||'<span class="hint">Sem registros</span>'}</div></div>
+    </div>
+  </div>`;
+}
+function afterPaciente(){}
+function tabAnamnese(p,id){
+  const a = p.atendimento || {};
+  const ro = !(can('medico') && p.status==='atendimento' && p.medicoId===S.me.id);
+  const dis = ro ? 'disabled' : '';
+  return `<div class="stack">
+    ${ro?'':`<div><div class="hint" style="margin-bottom:6px">Modelos rápidos</div><div class="qtpl">${Object.keys(TEMPLATES).map(k=>`<button type="button" onclick="usarTemplate('${id}','${k}')">${k}</button>`).join('')}</div></div>`}
+    <div class="field"><label for="aHDA">História da doença atual</label><textarea id="aHDA" ${dis} style="min-height:150px" oninput="autoSalvar('${id}')">${esc(a.hda||'')}</textarea></div>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label for="aAP">Antecedentes / medicações em uso</label><textarea id="aAP" ${dis} oninput="autoSalvar('${id}')">${esc(a.ap||'')}</textarea></div>
+      <div class="field"><label for="aEF">Exame físico</label><textarea id="aEF" ${dis} oninput="autoSalvar('${id}')">${esc(a.ef||'')}</textarea></div>
+    </div>
+    <div class="row" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label for="aHD">Hipótese diagnóstica / CID-10</label><input id="aHD" ${dis} value="${esc(a.hd||'')}" placeholder="ex.: I20.0 Angina instável" oninput="autoSalvar('${id}')"></div>
+      <div class="field"><label for="aCond">Conduta</label><input id="aCond" ${dis} value="${esc(a.conduta||'')}" placeholder="ex.: analgesia, RX, reavaliar" oninput="autoSalvar('${id}')"></div>
+    </div>
+    <div class="hint" id="saveHint">${ro ? (a.t?'Última edição '+fmtDH(a.t)+' por '+esc(a.por||''):'Somente leitura — inicie o atendimento para editar') : 'Salvamento automático ativo'}</div>
+  </div>`;
+}
+let saveT = {};
+function autoSalvar(id){ $('#saveHint').textContent = 'Salvando…'; clearTimeout(saveT[id]); saveT[id] = setTimeout(async()=>{ const g=i=>$('#'+i)?$('#'+i).value:''; await DB.update('pacientes/'+id+'/atendimento', { hda:g('aHDA'), ap:g('aAP'), ef:g('aEF'), hd:g('aHD'), conduta:g('aCond'), t:now(), por:S.me.nome }); const h=$('#saveHint'); if(h) h.textContent='Rascunho salvo '+fmtHora(now()); }, 900); }
+function usarTemplate(id,k){ const t=$('#aHDA'); t.value = (t.value ? t.value+'\n' : '') + TEMPLATES[k]; t.focus(); autoSalvar(id); }
+
+function tabPrescricao(p,id){
+  const rx = Object.entries(p.prescricoes||{}).map(([k,r])=>({k,...r})).sort((a,b)=>(a.t||0)-(b.t||0));
+  const medico = can('medico') && !['alta','transferido','evadiu','obito'].includes(p.status);
+  const enf = can('enfermagem','tecnico','medico');
+  return `<div class="stack">
+    ${medico?`<div class="card" style="background:var(--bg)"><div class="bd stack">
+      <div class="row" style="grid-template-columns:2fr 1fr 1fr">
+        <div class="field"><label for="rxDroga">Medicamento e dose</label><input id="rxDroga" placeholder="ex.: Dipirona 1 g" list="medList"><datalist id="medList">${['Dipirona 1 g','Dipirona 500 mg','Paracetamol 750 mg','Ibuprofeno 600 mg','Cetoprofeno 100 mg','Tramadol 100 mg','Morfina 2 mg','Ondansetrona 4 mg','Metoclopramida 10 mg','Bromoprida 10 mg','Omeprazol 40 mg','Hioscina 20 mg','Dexametasona 4 mg','Hidrocortisona 500 mg','Salbutamol 2,5 mg (NBZ)','Ipratrópio 250 mcg (NBZ)','Ceftriaxona 1 g','Amoxicilina+clavulanato 875 mg','Azitromicina 500 mg','Captopril 25 mg','Furosemida 40 mg','AAS 200 mg','Clopidogrel 300 mg','Enoxaparina 40 mg','Diazepam 10 mg','Haloperidol 5 mg','Insulina regular','SF 0,9% 500 mL','SF 0,9% 1000 mL','SG 5% 500 mL','Glicose 50% 40 mL','Oxigênio cateter nasal','Soro de reidratação oral'].map(m=>`<option value="${m}">`).join('')}</datalist></div>
+        <div class="field"><label for="rxVia">Via</label><select id="rxVia">${VIAS.map(v=>`<option>${v}</option>`).join('')}</select></div>
+        <div class="field"><label for="rxHora">Horário</label><select id="rxHora"><option value="agora">Agora</option><option value="6/6h">6/6 h</option><option value="8/8h">8/8 h</option><option value="12/12h">12/12 h</option><option value="1x">Dose única</option><option value="SN">Se necessário</option></select></div>
+      </div>
+      <div class="field"><label for="rxObs">Diluição / observação</label><input id="rxObs" placeholder="ex.: diluir em SF 100 mL, correr em 20 min"></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary sm" onclick="addRx('${id}')">Adicionar à prescrição</button></div>
+    </div></div>`:''}
+    ${rx.length ? rx.map(r=>`<div class="rx ${r.status==='administrado'?'done':''}">
+      <span class="tag ${r.status==='administrado'?'ok':r.status==='suspenso'?'':'warn'}">${r.status==='administrado'?'Administrado':r.status==='suspenso'?'Suspenso':'Pendente'}</span>
+      <div class="t"><b>${esc(r.droga)} — ${esc(r.via)} · ${esc(r.horario)}</b><small>${esc(r.obs||'')}${r.obs?' · ':''}prescrito ${fmtHora(r.t)} por ${esc(r.por)}${r.adminPor?` · administrado ${fmtHora(r.adminT)} por ${esc(r.adminPor)}`:''}</small></div>
+      ${r.status==='pendente' && enf ? `<button class="btn ok sm" onclick="checarRx('${id}','${r.k}')">Checar</button>`:''}
+      ${r.status!=='suspenso' && medico ? `<button class="btn ghost sm" onclick="suspenderRx('${id}','${r.k}')" aria-label="Suspender">✕</button>`:''}
+    </div>`).join('') : vazio('Sem prescrição', medico?'Adicione o primeiro item acima.':'')}
+    ${rx.length && can('medico')?`<button class="btn ghost" onclick="imprimirReceita('${id}')">Imprimir prescrição</button>`:''}
+  </div>`;
+}
+async function addRx(id){ const d=$('#rxDroga').value.trim(); if(!d) return toast('Informe o medicamento','bad'); const p=S.pacientes[id]; if (p.alergias && norm(p.alergias)!=='nenhuma' && norm(p.alergias).split(/[,;\/]/).some(a=>a.trim()&&norm(d).includes(a.trim().split(' ')[0])) && !confirm(`ATENÇÃO: paciente tem alergia registrada a "${p.alergias}". Prescrever mesmo assim?`)) return; await DB.push('pacientes/'+id+'/prescricoes', {droga:d, via:$('#rxVia').value, horario:$('#rxHora').value, obs:$('#rxObs').value.trim(), status:'pendente', t:now(), por:S.me.nome}); await evento(id, 'Prescrito: '+d+' '+$('#rxVia').value); $('#rxDroga').value=''; $('#rxObs').value=''; toast('Item adicionado','ok'); }
+async function checarRx(id,k){ const r=S.pacientes[id].prescricoes[k]; await DB.update(`pacientes/${id}/prescricoes/${k}`, {status:'administrado', adminPor:S.me.nome, adminT:now()}); await evento(id, 'Administrado: '+r.droga+' '+r.via+' — '+S.me.nome); toast('Administração checada','ok'); }
+async function suspenderRx(id,k){ const r=S.pacientes[id].prescricoes[k]; if(!confirm('Suspender '+r.droga+'?')) return; await DB.update(`pacientes/${id}/prescricoes/${k}`, {status:'suspenso'}); await evento(id, 'Suspenso: '+r.droga); }
+function imprimirReceita(id){ const p=S.pacientes[id], u=(S.config&&S.config.unidade)||UNIDADE_PADRAO; const rx=Object.values(p.prescricoes||{}).filter(r=>r.status!=='suspenso'); const w=window.open('','_blank'); w.document.write(`<html><head><title>Prescrição</title><style>body{font-family:Arial;padding:32px;max-width:720px;margin:auto}h2{margin:0}small{color:#555}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{padding:8px;border-bottom:1px solid #ddd;text-align:left}</style></head><body><h2>${esc(u.nome)}</h2><small>${esc(u.cidade||'')} · ${fmtDH(now())}</small><h3 style="margin-top:24px">Prescrição médica</h3><p><b>${esc(p.nome)}</b> · ${idade(p.nasc)} · ${p.sexo||''}${p.cns?' · CNS '+esc(p.cns):''}<br>Alergias: ${esc(p.alergias||'não informadas')}</p><table><tr><th>#</th><th>Medicamento</th><th>Via</th><th>Horário</th><th>Observação</th></tr>${rx.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.droga)}</td><td>${esc(r.via)}</td><td>${esc(r.horario)}</td><td>${esc(r.obs||'')}</td></tr>`).join('')}</table><p style="margin-top:60px;text-align:center">____________________________________<br>${esc(S.me.nome)}${S.me.registro?' · '+esc(S.me.registro):''}</p></body></html>`); w.document.close(); w.print(); }
+
+function tabExames(p,id){
+  const ex = Object.entries(p.exames||{}).map(([k,e])=>({k,...e})).sort((a,b)=>(a.t||0)-(b.t||0));
+  const medico = can('medico') && !['alta','transferido','evadiu','obito'].includes(p.status);
+  return `<div class="stack">
+    ${medico?`<div class="card" style="background:var(--bg)"><div class="bd stack">
+      <div class="row" style="grid-template-columns:2fr 1fr"><div class="field"><label for="exTipo">Exame</label><input id="exTipo" list="exList" placeholder="ex.: RX tórax PA"><datalist id="exList">${EXAMES.map(e=>`<option value="${e}">`).join('')}</datalist></div>
+      <div class="field"><label for="exPri">Prioridade</label><select id="exPri"><option value="rotina">Rotina</option><option value="urgente">Urgente</option></select></div></div>
+      <div class="field"><label for="exInd">Indicação clínica</label><input id="exInd" placeholder="ex.: dor torácica, afastar pneumotórax"></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary sm" onclick="addExame('${id}')">Solicitar</button></div>
+    </div></div>`:''}
+    ${ex.length ? ex.map(e=>`<div class="rx">
+      <span class="tag ${e.status==='liberado'?'ok':e.status==='execucao'?'acc':e.prioridade==='urgente'?'bad':''}">${e.status==='liberado'?'Liberado':e.status==='execucao'?'Em execução':'Pendente'}</span>
+      <div class="t"><b>${esc(e.tipo)} ${e.prioridade==='urgente'?'<span class="tag bad">urgente</span>':''}</b><small>${esc(e.indicacao||'')}${e.indicacao?' · ':''}solicitado ${fmtHora(e.t)} por ${esc(e.por)}${e.liberadoPor?` · liberado ${fmtHora(e.liberadoT)} por ${esc(e.liberadoPor)}`:''}</small>${e.laudo?`<div style="margin-top:6px;padding:8px 10px;background:var(--bg);border-radius:8px;font-size:13.5px;white-space:pre-wrap">${esc(e.laudo)}</div>`:''}</div>
+      ${e.status!=='liberado' && can('radiologia','tecnico','enfermagem','medico') ? `<button class="btn ghost sm" onclick="modalExame('${id}','${e.k}')">${e.status==='pendente'?'Iniciar':'Liberar'}</button>`:''}
+    </div>`).join('') : vazio('Nenhum exame solicitado')}
+  </div>`;
+}
+async function addExame(id){ const t=$('#exTipo').value.trim(); if(!t) return toast('Informe o exame','bad'); await DB.push('pacientes/'+id+'/exames', {tipo:t, prioridade:$('#exPri').value, indicacao:$('#exInd').value.trim(), status:'pendente', t:now(), por:S.me.nome}); await evento(id, 'Exame solicitado: '+t); $('#exTipo').value=''; $('#exInd').value=''; toast('Exame solicitado','ok'); }
+function modalExame(id,k){ const e=S.pacientes[id].exames[k], p=S.pacientes[id];
+  if (e.status==='pendente') return DB.update(`pacientes/${id}/exames/${k}`, {status:'execucao', execPor:S.me.nome, execT:now()}).then(()=>{ evento(id,'Exame iniciado: '+e.tipo+' — '+S.me.nome); toast('Exame em execução','ok'); });
+  openModal(`<h2>Liberar exame</h2><p class="hint" style="margin:-8px 0 14px">${esc(e.tipo)} · ${esc(p.nome)}</p><div class="field"><label for="exLaudo">Resultado / laudo / observação (opcional)</label><textarea id="exLaudo" style="min-height:140px" placeholder="ex.: sem alterações agudas / imagem disponível no PACS"></textarea></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn ok" onclick="liberarExame('${id}','${k}')">Liberar resultado</button></div>`);
+}
+async function liberarExame(id,k){ const e=S.pacientes[id].exames[k]; await DB.update(`pacientes/${id}/exames/${k}`, {status:'liberado', laudo:$('#exLaudo').value.trim(), liberadoPor:S.me.nome, liberadoT:now()}); await evento(id, 'Exame liberado: '+e.tipo+' — '+S.me.nome); closeModal(); toast('Resultado liberado — médico avisado','ok'); }
+
+function tabEvolucao(p,id){
+  const ev = Object.values(p.evolucoes||{}).sort((a,b)=>b.t-a.t);
+  const pode = can('medico','enfermagem') && !['alta','transferido','evadiu','obito'].includes(p.status);
+  return `<div class="stack">${pode?`<div class="field"><label for="evTexto">Nova evolução (${PERFIS[S.me.perfil]})</label><textarea id="evTexto" placeholder="Estado atual, resposta ao tratamento, plano…"></textarea></div><div style="display:flex;justify-content:flex-end"><button class="btn primary sm" onclick="addEvolucao('${id}')">Registrar evolução</button></div>`:''}
+  ${ev.length?ev.map(e=>`<div class="rx"><div class="t"><b>${fmtDH(e.t)} — ${esc(e.por)} <span class="tag">${PERFIS[e.perfil]||''}</span></b><div style="white-space:pre-wrap;margin-top:4px;font-size:14px">${esc(e.texto)}</div></div></div>`).join(''):vazio('Sem evoluções registradas')}</div>`;
+}
+async function addEvolucao(id){ const t=$('#evTexto').value.trim(); if(!t) return; await DB.push('pacientes/'+id+'/evolucoes', {t:now(), texto:t, por:S.me.nome, perfil:S.me.perfil}); await evento(id, 'Evolução registrada — '+S.me.nome); toast('Evolução registrada','ok'); }
+
+function tabDados(p,id){
+  const ro = !can('recepcao','enfermagem','medico');
+  return `<div class="stack"><div class="row" style="grid-template-columns:1fr 1fr">
+    <div class="field"><label for="dNome">Nome</label><input id="dNome" value="${esc(p.nome)}" ${ro?'disabled':''}></div>
+    <div class="field"><label for="dNasc">Nascimento</label><input id="dNasc" type="date" value="${esc(p.nasc||'')}" ${ro?'disabled':''}></div>
+    <div class="field"><label for="dSexo">Sexo</label><select id="dSexo" ${ro?'disabled':''}><option ${p.sexo==='F'?'selected':''}>F</option><option ${p.sexo==='M'?'selected':''}>M</option><option ${p.sexo==='Outro'?'selected':''}>Outro</option></select></div>
+    <div class="field"><label for="dCNS">CNS</label><input id="dCNS" value="${esc(p.cns||'')}" ${ro?'disabled':''}></div>
+    <div class="field"><label for="dCPF">CPF</label><input id="dCPF" value="${esc(p.cpf||'')}" ${ro?'disabled':''}></div>
+    <div class="field"><label for="dTel">Telefone</label><input id="dTel" value="${esc(p.telefone||'')}" ${ro?'disabled':''}></div>
+    <div class="field"><label for="dMae">Nome da mãe</label><input id="dMae" value="${esc(p.mae||'')}" ${ro?'disabled':''}></div>
+    <div class="field"><label for="dAlerg">Alergias</label><input id="dAlerg" value="${esc(p.alergias||'')}" ${ro?'disabled':''}></div>
+  </div><div class="hint">Recepção: ${esc(p.recepcaoPor||'—')} · ${fmtDH(p.chegada)}</div>
+  ${ro?'':`<div style="display:flex;justify-content:flex-end"><button class="btn primary sm" onclick="salvarDados('${id}')">Salvar cadastro</button></div>`}</div>`;
+}
+async function salvarDados(id){ const g=i=>$('#'+i).value.trim(); await DB.update('pacientes/'+id, {nome:g('dNome'), nasc:g('dNasc'), sexo:$('#dSexo').value, cns:g('dCNS'), cpf:g('dCPF'), telefone:g('dTel'), mae:g('dMae'), alergias:g('dAlerg')}); toast('Cadastro salvo','ok'); }
+
+/* ---------- conduta / alta ---------- */
+function modalConduta(id){
+  const p=S.pacientes[id];
+  openModal(`<h2>Conduta — ${esc(p.nome)}</h2><div class="stack">
+    <div class="seg" id="condSeg">${[['alta','Alta'],['observacao','Observação'],['transferido','Transferência'],['reavaliacao','Reavaliar depois']].map(([k,l],i)=>`<button type="button" class="${i===0?'on':''}" data-k="${k}" onclick="document.querySelectorAll('#condSeg button').forEach(b=>b.classList.toggle('on',b===this));$('#condExtra').className=this.dataset.k">${l}</button>`).join('')}</div>
+    <div class="field"><label for="cTexto">Orientações / motivo / destino</label><textarea id="cTexto" placeholder="ex.: retornar se piora; encaminhado ao HSF para avaliação cirúrgica"></textarea></div>
+    <div id="condExtra" class="alta"><div class="row"><div class="field"><label for="cAtest">Atestado (dias)</label><input id="cAtest" inputmode="numeric" placeholder="0"></div><div class="field"><label for="cRet">Retorno</label><input id="cRet" placeholder="ex.: UBS em 7 dias"></div></div></div>
+    <div class="field"><label><input type="checkbox" id="cGrave"> Outro desfecho (evasão / óbito)</label><select id="cGraveSel" class="hidden" style="margin-top:6px"><option value="evadiu">Evasão</option><option value="obito">Óbito</option></select></div>
+  </div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn ok" onclick="salvarConduta('${id}')">Confirmar</button></div>`);
+  $('#cGrave').onchange = e => $('#cGraveSel').classList.toggle('hidden', !e.target.checked);
+}
+async function salvarConduta(id){
+  let k = document.querySelector('#condSeg button.on').dataset.k;
+  if ($('#cGrave').checked) k = $('#cGraveSel').value;
+  const p = S.pacientes[id]; const txt=$('#cTexto').value.trim();
+  const upd = { status:k, conduta:{tipo:k, texto:txt, t:now(), por:S.me.nome, atestado:$('#cAtest')?$('#cAtest').value:'', retorno:$('#cRet')?$('#cRet').value:''} };
+  if (['alta','transferido','evadiu','obito'].includes(k)) { upd.saida = now(); if (p.leito) upd.leito = null; }
+  if (k==='observacao' && !p.leito) { closeModal(); await DB.update('pacientes/'+id, upd); await evento(id, 'Conduta: observação — '+S.me.nome); return modalLeito(id); }
+  if (k==='reavaliacao') upd.medicoId = null;
+  await DB.update('pacientes/'+id, upd); await evento(id, 'Conduta: '+STATUS[k]+(txt?' — '+txt:'')+' — '+S.me.nome);
+  closeModal(); toast(STATUS[k]+' registrada','ok'); if (['alta','transferido','evadiu','obito'].includes(k)) go('fila');
+}
+async function reabrir(id){ if(!confirm('Reabrir este atendimento?')) return; await DB.update('pacientes/'+id, {status:'reavaliacao', saida:null}); await evento(id,'Atendimento reaberto — '+S.me.nome); }
+
+/* ---------- observação / leitos ---------- */
+const N_LEITOS = () => (S.config && S.config.leitos) || 10;
+function leitosLivres(){ const oc = new Set(ativos().filter(p=>p.leito).map(p=>String(p.leito))); return N_LEITOS() - oc.size; }
+function vObservacao(){
+  const A = ativos(); const oc = {}; A.filter(p=>p.leito).forEach(p=>oc[p.leito]=p);
+  const semLeito = A.filter(p=>p.status==='observacao' && !p.leito);
+  return `<div class="page-h"><div><h1>Observação e leitos</h1><p>${N_LEITOS()} leitos · ${leitosLivres()} livre(s)</p></div>${S.me.admin?`<button class="btn ghost sm" onclick="const n=prompt('Número de leitos',N_LEITOS());if(n)DB.set('config/leitos',+n)">Configurar leitos</button>`:''}</div>
+  <div class="card" style="margin-bottom:18px"><div class="bd beds">${Array.from({length:N_LEITOS()},(_,i)=>{ const n=i+1, p=oc[n]; return p ? `<button class="bed ${p.risco==='VERM'||p.risco==='LAR'?'mon':'busy'}" onclick="go('paciente','${p.id}')"><small>Leito ${n}</small><b>${esc(p.nome)}</b><em>${idade(p.nasc)} · ${STATUS[p.status]}</em><em>${Object.values(p.prescricoes||{}).filter(r=>r.status==='pendente').length} med. pendente(s)</em></button>` : `<div class="bed free"><small>Leito ${n}</small><b style="color:var(--ok)">Livre</b></div>`; }).join('')}</div></div>
+  ${semLeito.length?`<div class="card"><div class="hd"><h2>Em observação sem leito</h2></div><div class="list">${semLeito.map(p=>itemPac(p,`<button class="btn primary sm" onclick="modalLeito('${p.id}')">Leito</button>`)).join('')}</div></div>`:''}`;
+}
+function modalLeito(id){
+  const p=S.pacientes[id]; const oc=new Set(ativos().filter(x=>x.leito&&x.id!==id).map(x=>String(x.leito)));
+  openModal(`<h2>Leito — ${esc(p.nome)}</h2><div class="beds">${Array.from({length:N_LEITOS()},(_,i)=>{const n=i+1;const busy=oc.has(String(n));return `<button class="bed ${busy?'busy':String(p.leito)===String(n)?'mon':'free'}" ${busy?'disabled':''} onclick="setLeito('${id}',${n})"><small>Leito ${n}</small><b>${busy?'Ocupado':String(p.leito)===String(n)?'Atual':'Livre'}</b></button>`;}).join('')}</div>
+  <div class="actions">${p.leito?`<button class="btn ghost" onclick="setLeito('${id}',null)">Liberar leito</button>`:''}<button class="btn ghost" onclick="closeModal()">Fechar</button></div>`);
+}
+async function setLeito(id,n){ const p=S.pacientes[id]; const upd={leito:n}; if (n && !['observacao','atendimento'].includes(p.status)) upd.status='observacao'; await DB.update('pacientes/'+id, upd); await evento(id, n?'Leito '+n+' — '+S.me.nome:'Leito liberado — '+S.me.nome); closeModal(); toast(n?'Leito '+n+' atribuído':'Leito liberado','ok'); }
+
+/* ---------- medicações (enfermagem) ---------- */
+function vMedicacoes(){
+  const rows=[]; ativos().forEach(p=>Object.entries(p.prescricoes||{}).forEach(([k,r])=>{ if(r.status==='pendente') rows.push({p,k,r}); }));
+  rows.sort((a,b)=>ordFila(a.p,b.p)||(a.r.t-b.r.t));
+  const done=[]; ativos().forEach(p=>Object.entries(p.prescricoes||{}).forEach(([k,r])=>{ if(r.status==='administrado'&&r.adminT>hoje()) done.push({p,k,r}); })); done.sort((a,b)=>b.r.adminT-a.r.adminT);
+  return `<div class="page-h"><div><h1>Medicações</h1><p>${rows.length} pendente(s) na unidade</p></div></div>
+  <div class="card" style="margin-bottom:18px"><div class="list">${rows.map(({p,k,r})=>`<div class="item"><span class="risk ${p.risco||'none'}">${p.leito?'L'+p.leito:(p.risco||'—')}</span><div class="who"><b>${esc(r.droga)} — ${esc(r.via)} · ${esc(r.horario)}</b><small>${esc(p.nome)} · ${idade(p.nasc)}${p.alergias&&norm(p.alergias)!=='nenhuma'?' · <b style="color:var(--bad)">ALERGIA: '+esc(p.alergias)+'</b>':''}${r.obs?' · '+esc(r.obs):''} · prescrito ${fmtHora(r.t)}</small></div><span class="wait ${mins(r.t)>30?'late':mins(r.t)>15?'soon':''}">${fmtMin(mins(r.t))}</span>${can('enfermagem','tecnico','medico')?`<button class="btn ok sm" onclick="checarRx('${p.id}','${k}')">Checar</button>`:''}<button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></div>`).join('')||vazio('Nenhuma medicação pendente')}</div></div>
+  <div class="card"><div class="hd"><h2>Administradas hoje</h2><span class="hint">${done.length}</span></div><div class="list">${done.slice(0,30).map(({p,r})=>`<div class="item"><span class="tag ok">${fmtHora(r.adminT)}</span><div class="who"><b>${esc(r.droga)} — ${esc(r.via)}</b><small>${esc(p.nome)} · por ${esc(r.adminPor)}</small></div></div>`).join('')||vazio('Nada administrado hoje ainda')}</div></div>`;
+}
+
+/* ---------- radiologia / exames ---------- */
+function vRadiologia(){
+  const rows=[]; ativos().forEach(p=>Object.entries(p.exames||{}).forEach(([k,e])=>rows.push({p,k,e})));
+  const pend=rows.filter(x=>x.e.status!=='liberado').sort((a,b)=>(a.e.prioridade==='urgente'?0:1)-(b.e.prioridade==='urgente'?0:1)||a.e.t-b.e.t);
+  const lib=rows.filter(x=>x.e.status==='liberado'&&x.e.liberadoT>hoje()).sort((a,b)=>b.e.liberadoT-a.e.liberadoT);
+  const card=({p,k,e})=>`<div class="item"><span class="tag ${e.status==='execucao'?'acc':e.prioridade==='urgente'?'bad':''}">${e.status==='execucao'?'Em execução':e.prioridade==='urgente'?'Urgente':'Rotina'}</span><div class="who"><b>${esc(e.tipo)}</b><small>${esc(p.nome)} · ${idade(p.nasc)} · ${p.leito?'Leito '+p.leito+' · ':''}${esc(e.indicacao||'')} · sol. ${fmtHora(e.t)} por ${esc(e.por)}</small></div><span class="wait ${mins(e.t)>60?'late':mins(e.t)>30?'soon':''}">${fmtMin(mins(e.t))}</span>${e.status!=='liberado'&&can('radiologia','tecnico','enfermagem','medico')?`<button class="btn ${e.status==='pendente'?'primary':'ok'} sm" onclick="modalExame('${p.id}','${k}')">${e.status==='pendente'?'Iniciar':'Liberar'}</button>`:''}<button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></div>`;
+  return `<div class="page-h"><div><h1>Exames e imagem</h1><p>${pend.length} pendente(s) · ${lib.length} liberado(s) hoje</p></div></div>
+  <div class="card" style="margin-bottom:18px"><div class="hd"><h2>Fila de exames</h2></div><div class="list">${pend.map(card).join('')||vazio('Nenhum exame pendente')}</div></div>
+  <div class="card"><div class="hd"><h2>Liberados hoje</h2></div><div class="list">${lib.slice(0,30).map(({p,e})=>`<div class="item"><span class="tag ok">${fmtHora(e.liberadoT)}</span><div class="who"><b>${esc(e.tipo)}</b><small>${esc(p.nome)} · ${esc(e.laudo||'sem observação')} · por ${esc(e.liberadoPor)}</small></div><button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></div>`).join('')||vazio('Nada liberado hoje ainda')}</div></div>`;
+}
+
+/* ---------- histórico / busca / relatório ---------- */
+function vHistorico(){
+  const H = pacs().filter(p=>p.chegada>=hoje()).sort((a,b)=>b.chegada-a.chegada);
+  return `<div class="page-h"><div><h1>Histórico do dia</h1><p>${fmtData(now())} · ${H.length} entradas</p></div></div>
+  <div class="card"><table class="tb"><thead><tr><th>Chegada</th><th>Paciente</th><th>Risco</th><th>Status</th><th>Médico</th><th>Saída</th><th></th></tr></thead><tbody>${H.map(p=>`<tr><td>${fmtHora(p.chegada)}</td><td><b>${esc(p.nome)}</b><br><small style="color:var(--mute)">${idade(p.nasc)} · ${esc(p.queixa||'')}</small></td><td><span class="risk ${p.risco||'none'}" style="width:32px;height:28px;font-size:10px">${p.risco||'—'}</span></td><td><span class="tag">${STATUS[p.status]}</span></td><td>${esc(p.medicoNome||'—')}</td><td>${fmtHora(p.saida)}</td><td><button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></td></tr>`).join('')||`<tr><td colspan="7">${vazio('Nenhuma entrada hoje')}</td></tr>`}</tbody></table></div>`;
+}
+function vBusca(){
+  const q = norm(S.busca), dig = S.busca.replace(/\D/g,'');
+  const R = pacs().filter(p => norm(p.nome).includes(q) || (dig && ((p.cns||'').replace(/\D/g,'').includes(dig) || (p.cpf||'').replace(/\D/g,'').includes(dig)))).sort((a,b)=>b.chegada-a.chegada).slice(0,50);
+  return `<div class="page-h"><div><h1>Busca</h1><p>${R.length} resultado(s) para "${esc(S.busca)}"</p></div><button class="btn ghost sm" onclick="modalEntrada({nome:S.busca})">Nova entrada com esse nome</button></div>
+  <div class="card"><div class="list">${R.map(p=>`<div class="item"><span class="risk ${p.risco||'none'}">${p.risco||'—'}</span><div class="who"><b>${esc(p.nome)}</b><small>${idade(p.nasc)}${p.cns?' · CNS '+esc(p.cns):''} · ${fmtDH(p.chegada)} · ${STATUS[p.status]}</small></div>${['alta','transferido','evadiu','obito'].includes(p.status)?`<button class="btn ghost sm" onclick="modalEntrada(S.pacientes['${p.id}'])">Nova entrada</button>`:''}<button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></div>`).join('')||vazio('Nenhum paciente encontrado')}</div></div>`;
+}
+function vRelatorio(){
+  const dias = 7; const hoje0 = hoje(); const out=[];
+  for (let i=dias-1;i>=0;i--){ const d0=hoje0-i*86400000, d1=d0+86400000; const P=pacs().filter(p=>p.chegada>=d0&&p.chegada<d1); const esp=P.filter(p=>p.inicioAtend).map(p=>(p.inicioAtend-p.chegada)/60000); out.push({d:fmtData(d0), n:P.length, alta:P.filter(p=>p.status==='alta').length, transf:P.filter(p=>p.status==='transferido').length, obs:P.filter(p=>p.leito||p.status==='observacao').length, esp: esp.length?Math.round(esp.reduce((a,b)=>a+b,0)/esp.length):null, risco: ORDEM_RISCO.map(r=>P.filter(p=>p.risco===r).length)}); }
+  const tot = out.reduce((s,x)=>s+x.n,0);
+  return `<div class="page-h"><div><h1>Relatórios</h1><p>Últimos ${dias} dias · ${tot} atendimentos</p></div><button class="btn ghost sm" onclick="exportCSV()">Exportar CSV</button></div>
+  <div class="card"><table class="tb"><thead><tr><th>Dia</th><th>Entradas</th><th>Altas</th><th>Transf.</th><th>Observação</th><th>Espera média p/ médico</th><th>Verm</th><th>Lar</th><th>Ama</th><th>Verd</th><th>Azul</th></tr></thead><tbody>${out.map(x=>`<tr><td>${x.d}</td><td><b>${x.n}</b></td><td>${x.alta}</td><td>${x.transf}</td><td>${x.obs}</td><td>${x.esp!=null?fmtMin(x.esp):'—'}</td>${x.risco.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function exportCSV(){ const P=pacs().sort((a,b)=>a.chegada-b.chegada); const h=['chegada','nome','nascimento','sexo','cns','risco','queixa','status','medico','inicio_atendimento','saida','hd','conduta']; const rows=P.map(p=>[fmtDH(p.chegada),p.nome,p.nasc||'',p.sexo||'',p.cns||'',p.risco||'',p.queixa||'',STATUS[p.status]||p.status,p.medicoNome||'',fmtDH(p.inicioAtend),fmtDH(p.saida),(p.atendimento||{}).hd||'',(p.conduta||{}).texto||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')); const csv='\ufeff'+h.join(';')+'\n'+rows.join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='atendimentos_'+fmtData(now()).replace(/\//g,'-')+'.csv'; a.click(); }
+
+/* ---------- usuários (admin) ---------- */
+function vUsuarios(){
+  const U = Object.entries(S.usuarios).map(([id,u])=>({id,...u})).sort((a,b)=>(a.aprovado?1:0)-(b.aprovado?1:0)||a.nome.localeCompare(b.nome));
+  const u0=(S.config&&S.config.unidade)||UNIDADE_PADRAO;
+  return `<div class="page-h"><div><h1>Usuários</h1><p>${U.filter(u=>u.aprovado).length} ativos · ${U.filter(u=>!u.aprovado).length} aguardando aprovação</p></div><button class="btn ghost sm" onclick="modalUnidade()">Dados da unidade: ${esc(u0.nome)}</button></div>
+  <div class="card"><table class="tb"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Registro</th><th>Situação</th><th></th></tr></thead><tbody>${U.map(u=>`<tr><td><b>${esc(u.nome)}</b>${u.admin?' <span class="tag acc">admin</span>':''}</td><td>${esc(u.usuario)}</td><td><select onchange="DB.update('usuarios/${u.id}',{perfil:this.value})" ${u.id===S.me.id?'disabled':''}>${Object.entries(PERFIS).filter(([k])=>k!=='admin').map(([k,v])=>`<option value="${k}" ${u.perfil===k?'selected':''}>${v}</option>`).join('')}</select></td><td>${esc(u.registro||'—')}</td><td>${u.aprovado?'<span class="tag ok">Ativo</span>':'<span class="tag warn">Pendente</span>'}</td><td style="white-space:nowrap">${!u.aprovado?`<button class="btn ok sm" onclick="DB.update('usuarios/${u.id}',{aprovado:true});toast('Aprovado','ok')">Aprovar</button> `:''}${u.id!==S.me.id?`<button class="btn ghost sm" onclick="DB.update('usuarios/${u.id}',{admin:${!u.admin}})">${u.admin?'Tirar admin':'Tornar admin'}</button> <button class="btn ghost sm" onclick="resetSenha('${u.id}')">Senha</button> <button class="btn ghost sm" onclick="if(confirm('Remover ${esc(u.nome)}?'))DB.remove('usuarios/${u.id}')">✕</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;
+}
+async function resetSenha(id){ if(!DB.local){ return toast('No modo online a senha é gerida pelo Firebase e não pode ser trocada aqui.','bad'); } const s=prompt('Nova senha para '+S.usuarios[id].nome); if(!s||s.length<4) return; await DB.update('usuarios/'+id,{senha:await sha(s)}); toast('Senha redefinida','ok'); }
+function modalUnidade(){ const u=(S.config&&S.config.unidade)||UNIDADE_PADRAO; openModal(`<h2>Dados da unidade</h2><div class="stack"><div class="field"><label for="uCod">Código CNES</label><input id="uCod" value="${esc(u.codigo)}"></div><div class="field"><label for="uNome">Nome</label><input id="uNome" value="${esc(u.nome)}"></div><div class="field"><label for="uCid">Cidade</label><input id="uCid" value="${esc(u.cidade||'')}"></div></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="DB.set('config/unidade',{codigo:$('#uCod').value,nome:$('#uNome').value,cidade:$('#uCid').value}).then(()=>{closeModal();toast('Salvo','ok')})">Salvar</button></div>`); }
+
+/* ---------- PWA (service worker inline) ---------- */
+if ('serviceWorker' in navigator && location.protocol==='https:') {
+  const sw = `self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>clients.claim());self.addEventListener('fetch',e=>{if(e.request.mode==='navigate'){e.respondWith(fetch(e.request).then(r=>{const c=r.clone();caches.open('gs1').then(x=>x.put(e.request,c));return r;}).catch(()=>caches.match(e.request)));}});`;
+  try { navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'text/javascript'}))).catch(()=>{}); } catch(e){}
+}
+boot();
+</script>
+</body>
+</html>
