@@ -300,7 +300,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "658022441156",
   appId: "1:658022441156:web:c3d3e0fa98e562572f2991"
 };
-const UNIDADE_PADRAO = { codigo: "7429568", nome: "UPA 24 HORAS", cidade: "Taquaritinga · SP" };
+const UNIDADE_PADRAO = { codigo: "7429568", nome: "UPA 24 HORAS", cidade: "Taquaritinga · SP", prefeitura: "Prefeitura Municipal de Taquaritinga - SP", nomeCompleto: "Unidade de Pronto Atendimento - UPA 24 Horas", endereco: "Avenida Vicente Jose Parise, 2100 - Centro", telefone: "(16) 3253-8890" };
 const SETORES_PADRAO = { emergencia: 3, observacao: 2 };
 
 /* ---------- utilidades ---------- */
@@ -332,7 +332,7 @@ const STATUS = { triagem:'Aguard. triagem', fila:'Aguard. médico', atendimento:
 const SETOR_N = { emergencia:'Emergência', observacao:'Observação', medicacao:'Medicação' };
 const FIM = ['alta','transferido','evadiu','obito'];
 const COMORB = ['HAS','Diabetes','Tabagismo','IAM','AVC','Câncer','Cardiopatia','Transplantado','Imunodeprimido','Pneumonia','Ausente','Outras'];
-const VIAS = ['VO','EV','IM','SC','SL','Inalatória','Tópica','Retal','Ocular','Nasal','Intranasal'];
+const VIAS = ['VO','EV','IM','SC','SL','Inalatória','Tópica','Retal','Ocular','Nasal','Intranasal','Procedimento'];
 const FREQS = ['Agora','Dose única','6/6 h','8/8 h','12/12 h','24/24 h','4/4 h','Se necessário','Contínuo'];
 
 const MEDS_PADRAO = [
@@ -345,10 +345,11 @@ const MEDS_PADRAO = [
   ['Diazepam','5 mg/mL amp 2 mL','EV','5-10 mg'],['Midazolam','5 mg/mL amp 3 mL','EV','2-5 mg'],['Haloperidol','5 mg/mL amp 1 mL','IM','5 mg'],['Fenitoína','50 mg/mL amp 5 mL','EV','15-20 mg/kg'],['Clonazepam','2,5 mg/mL gotas','VO','5-10 gotas'],
   ['Insulina regular','100 UI/mL','SC','conforme glicemia'],['Glicose 50%','amp 10 mL','EV','40 mL'],['Glicose 25%','amp 10 mL','EV','20-40 mL'],['Cloreto de potássio 19,1%','amp 10 mL','EV','conforme diluição'],['Tiamina','100 mg/mL amp','IM','300 mg'],
   ['SF 0,9%','bolsa 500 mL','EV','500 mL'],['SF 0,9%','bolsa 1000 mL','EV','1000 mL'],['Ringer lactato','bolsa 500 mL','EV','500 mL'],['SG 5%','bolsa 500 mL','EV','500 mL'],['Soro de reidratação oral','envelope','VO','1 envelope em 1 L'],['Oxigênio','cateter nasal / máscara','Inalatória','2-5 L/min'],
-  ['Lidocaína 2% s/ vasoconstritor','fr 20 mL','Tópica','infiltração local'],['Vacina antitetânica (dT)','amp','IM','0,5 mL'],['Soro antitetânico','amp','IM','conforme protocolo'],['Nitrofurantoína','100 mg cp','VO','100 mg'],['Fluconazol','150 mg cp','VO','150 mg'],['Aciclovir','200 mg cp','VO','400 mg'],['Nimesulida','100 mg cp','VO','100 mg'],['Ciclobenzaprina','5 mg cp','VO','5 mg']
+  ['Lidocaína 2% s/ vasoconstritor','fr 20 mL','Tópica','infiltração local'],['Vacina antitetânica (dT)','amp','IM','0,5 mL'],['Soro antitetânico','amp','IM','conforme protocolo'],['Nitrofurantoína','100 mg cp','VO','100 mg'],['Fluconazol','150 mg cp','VO','150 mg'],['Aciclovir','200 mg cp','VO','400 mg'],['Nimesulida','100 mg cp','VO','100 mg'],['Ciclobenzaprina','5 mg cp','VO','5 mg'],
+  ['BCF (batimentos cardiofetais)','sonar Doppler','Procedimento','registrar bpm'],['Toque vaginal','avaliação de colo/dilatação','Procedimento','registrar achados'],['Dinâmica uterina','contrações em 10 min','Procedimento','registrar nº/duração'],['Exame especular','avaliação de colo/secreção','Procedimento','registrar achados']
 ];
-const LAB_PADRAO = ['Hemograma','PCR','Glicemia','Ureia','Creatinina','Sódio','Potássio','TGO','TGP','Bilirrubinas','Amilase','Lipase','Troponina','CK-MB','D-dímero','Coagulograma (TP/TTPA)','Gasometria arterial','Gasometria venosa','Lactato','Urina I','Urocultura','Beta-HCG','Hemocultura','Teste rápido dengue','Teste rápido COVID/influenza','Teste rápido HIV/sífilis','Glicemia capilar','Tipagem sanguínea'];
-const IMG_PADRAO = ['RX tórax PA/perfil','RX tórax PA','RX abdome agudo','RX coluna cervical','RX coluna lombar','RX bacia','RX ombro','RX cotovelo','RX punho','RX mão','RX joelho','RX tornozelo','RX pé','RX crânio','RX seios da face','ECG 12 derivações','USG abdome total (externo)','TC crânio (externo)'];
+const LAB_PADRAO = ['Urina I','Hemograma','Troponina','Teste rápido COVID','Beta-HCG'];
+const IMG_PADRAO = ['RX tórax','RX abdome','RX crânio','RX seios da face','RX coluna cervical','RX coluna torácica','RX coluna lombar','RX bacia','RX quadril','RX ombro','RX clavícula','RX braço (úmero)','RX cotovelo','RX antebraço','RX punho','RX mão','RX dedos da mão','RX fêmur','RX joelho','RX perna (tíbia/fíbula)','RX tornozelo','RX pé','RX calcâneo','RX dedos do pé','ECG com laudo','ECG sem laudo','TC (especificar)'];
 
 /* ---------- exame físico por clique (base MedDeck) ---------- */
 const GR = ['+','++','+++','++++'];
@@ -934,7 +935,7 @@ function tabExames(p, id, key, catalogo, tipoLabel){
     ${medico?`<div class="card inset"><div class="bd stack">
       <div class="field"><label>Selecione (${tipoLabel})</label><div class="medsel" style="max-height:170px">${catalogo.map(m=>`<button type="button" class="${(S.exSel||[]).includes(m.nome)?'on':''}" onclick="toggleEx('${m.nome.replace(/'/g,"\\'")}')">${esc(m.nome)}</button>`).join('')}</div></div>
       <div class="row" style="grid-template-columns:2fr 1fr auto;align-items:end">
-        <div class="field"><label for="exOutro">Outro exame / indicação clínica</label><input id="exOutro" placeholder="exame não listado ou indicação (ex.: dor torácica)"></div>
+        <div class="field"><label for="exOutro">Outro exame / indicação clínica</label><input id="exOutro" placeholder="exame livre (ex.: RX tórax PA/perfil, TC crânio s/ contraste) ou indicação clínica"></div>
         <div class="field"><label for="exPri">Prioridade</label><select id="exPri"><option value="rotina">Rotina</option><option value="urgente">Urgente</option></select></div>
         <button class="btn primary" onclick="addExames('${id}','${key}')">Solicitar ${(S.exSel||[]).length?'('+S.exSel.length+')':''}</button></div>
     </div></div>`:''}
@@ -1116,22 +1117,55 @@ function exportCSV(){ const P=pacs().sort((a,b)=>a.chegada-b.chegada); const h=[
 /* =====================================================================
    IMPRESSÃO
    ===================================================================== */
-function cabecalhoImp(){ const u=unidade(); const logo=cfg().logo; return `<div style="display:flex;align-items:center;gap:14px;border-bottom:2px solid #1d5a8f;padding-bottom:10px;margin-bottom:16px">${logo?`<img src="${logo}" style="height:56px">`:`<div style="width:48px;height:48px;border-radius:10px;background:#1d5a8f;color:#fff;display:flex;align-items:center;justify-content:center;font:800 26px Arial">+</div>`}<div><div style="font:800 18px Arial">${esc(u.nome)}</div><div style="font:13px Arial;color:#444">${esc(u.cidade||'')} · CNES ${esc(u.codigo)}</div></div><div style="margin-left:auto;font:12px Arial;color:#444">${fmtDH(now())}</div></div>`; }
-function assinatura(){ return `<div style="margin-top:70px;text-align:center;font:13px Arial">____________________________________<br><b>${esc(S.me.nome)}</b>${S.me.registro?'<br>'+esc(S.me.registro):''}</div>`; }
-function imprimir(html, titulo){ const w=window.open('','_blank'); w.document.write(`<html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>body{font-family:Arial;padding:28px 36px;max-width:760px;margin:auto;color:#000}table{width:100%;border-collapse:collapse}td,th{padding:7px 8px;border-bottom:1px solid #ccc;text-align:left;font-size:13px;vertical-align:top}h3{margin:18px 0 8px;font-size:15px}p{margin:4px 0;font-size:13.5px;white-space:pre-wrap}@media print{button{display:none}}</style></head><body>${html}<div style="margin-top:24px;text-align:center"><button onclick="window.print()" style="padding:10px 18px;font-size:14px">Imprimir</button></div></body></html>`); w.document.close(); }
+function extenso(n){ n=+n||0; const u=['zero','um','dois','três','quatro','cinco','seis','sete','oito','nove','dez','onze','doze','treze','quatorze','quinze','dezesseis','dezessete','dezoito','dezenove'], d=['','','vinte','trinta','quarenta','cinquenta','sessenta','setenta','oitenta','noventa']; if(n<20) return u[n]; if(n<100) return d[Math.floor(n/10)]+(n%10?' e '+u[n%10]:''); return String(n); }
+function cabecalhoImp(){ const u={...UNIDADE_PADRAO,...unidade()}; const br=cfg().logo, upa=cfg().logo2;
+  return `<div class="cab"><div class="br">${br?`<img src="${br}">`:''}</div><div class="mid"><div class="pref">${esc(u.prefeitura||'')}</div>${upa?`<img class="upa" src="${upa}">`:`<div class="upatxt">UPA<b>24h</b><small>UNIDADE DE PRONTO ATENDIMENTO</small></div>`}<div class="un">${esc(u.nomeCompleto||u.nome)}</div><div class="end">${esc(u.endereco||'')}</div><div class="end">${esc(u.telefone||'')}</div></div><div class="br">${br?`<img src="${br}">`:''}</div></div><hr class="cabhr">`; }
+function rodapeImp(){ return `<div class="rod">DATA: <span class="ln" style="width:110px;text-align:center"><b>${fmtData(now())}</b></span> &nbsp;&nbsp;&nbsp; ASSINATURA E CARIMBO: <span class="ln" style="width:260px;text-align:center;font-size:11px">${esc(S.me.nome)}${S.me.registro?' · '+esc(S.me.registro):''}</span></div>`; }
+function assinatura(){ return ''; }
+const CSS_IMP = `@page{size:A4;margin:8mm}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;font-size:13px}
+.pg{border:1.5px solid #000;min-height:270mm;box-sizing:border-box;padding:10px 26px 16px;position:relative;max-width:194mm;margin:0 auto 12px;page-break-after:always}.pg:last-of-type{page-break-after:auto}
+.cab{display:flex;align-items:flex-start;gap:8px}.cab .br{width:64px;flex-shrink:0;padding-top:4px}.cab .br img{width:64px}.cab .mid{flex:1;text-align:center}
+.cab .pref{font-weight:bold;font-size:17px;letter-spacing:.5px;margin:6px 0 4px}.cab img.upa{height:58px;margin:2px 0}.upatxt{font:900 34px Arial;line-height:1;margin:4px 0 2px}.upatxt b{font-weight:400}.upatxt small{display:block;font:bold 9px Arial;letter-spacing:.5px}
+.cab .un{font-weight:bold;font-size:15px;margin-top:4px}.cab .end{font-size:14px}
+hr.cabhr{border:0;border-top:1.5px solid #000;margin:8px 0 14px}
+h3.tit{text-align:center;letter-spacing:6px;font-size:17px;margin:4px 0 18px}
+.corpo{font-family:'Times New Roman',serif;font-size:15px;line-height:1.9;white-space:pre-wrap}.corpo.rec{min-height:120mm}
+.corpo.rec{font-family:Arial;font-size:14px;line-height:1.7}
+.ln{display:inline-block;border-bottom:1px solid #000;min-height:14px;vertical-align:bottom;padding:0 4px}
+.obs{font-size:12px;font-weight:bold;margin-top:26px;line-height:1.5}
+.asspac{margin:60px auto 0;width:70%;text-align:center;border-top:1px solid #000;font-size:10px;font-weight:bold;padding-top:3px}
+.rod{position:absolute;left:26px;right:26px;bottom:14px;font-size:11px}
+.cab2 p{margin:2px 0}
+@media print{button{display:none}}`;
+function imprimir(html, titulo){ const w=window.open('','_blank'); w.document.write(`<html><head><meta charset="utf-8"><title>${esc(titulo)}</title><style>${CSS_IMP}</style></head><body>${html}<div style="text-align:center;margin:12px"><button onclick="window.print()" style="padding:10px 18px;font-size:14px">Imprimir</button></div></body></html>`); w.document.close(); }
 function pacLinha(p){ return `<p><b>${esc(p.nome)}</b> · ${idade(p.nasc)} · ${p.sexo||''}${p.nasc?' · nasc. '+fmtData(new Date(p.nasc+'T12:00')):''}${p.cns?' · CNS '+esc(p.cns):''}${p.cpf?' · CPF '+esc(p.cpf):''}<br>Alergias: ${esc(p.alergias||'não informadas')}</p>`; }
-function imprimirPrescricao(id){ const p=S.pacientes[id]; const rx=vals(p.prescricoes).filter(r=>r.status!=='suspenso'); imprimir(cabecalhoImp()+`<h3>Prescrição interna</h3>${pacLinha(p)}<table><tr><th>#</th><th>Medicamento</th><th>Dose</th><th>Via</th><th>Freq.</th><th>Obs.</th><th>Checagem</th></tr>${rx.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.droga)}</td><td>${esc(r.dose||'')}</td><td>${esc(r.via)}</td><td>${esc(r.freq)}</td><td>${esc(r.obs||'')}</td><td>${r.adminPor?fmtHora(r.adminT)+' '+esc(r.adminPor):'____'}</td></tr>`).join('')}</table>`+assinatura(), 'Prescrição'); }
-function modalReceita(id){ const p=S.pacientes[id];
-  openModal(`<h2>Receituário — ${esc(p.nome)}</h2><div class="stack">
-    <div class="seg" id="recTipo"><button type="button" class="on" data-t="receita" onclick="document.querySelectorAll('#recTipo button').forEach(x=>x.classList.toggle('on',x===this))">Receita</button><button type="button" data-t="atestado" onclick="document.querySelectorAll('#recTipo button').forEach(x=>x.classList.toggle('on',x===this))">Atestado</button><button type="button" data-t="declaracao" onclick="document.querySelectorAll('#recTipo button').forEach(x=>x.classList.toggle('on',x===this))">Declaração</button><button type="button" data-t="encaminhamento" onclick="document.querySelectorAll('#recTipo button').forEach(x=>x.classList.toggle('on',x===this))">Encaminhamento</button></div>
-    <div class="field"><label for="recTexto">Texto livre</label>${tplBar('receita',id,'recTexto')}<textarea id="recTexto" style="min-height:220px" placeholder="1) Dipirona 500 mg — 1 cp VO 6/6 h se dor ou febre, por 3 dias\n2) ..."></textarea></div>
-    <div class="row"><div class="field"><label for="recVias">Vias</label><select id="recVias"><option value="1">1 via</option><option value="2">2 vias (controlado)</option></select></div></div>
-  </div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="imprimirReceita('${id}')">Imprimir</button></div>`, true);
-}
-function imprimirReceita(id){ const p=S.pacientes[id]; const tipo=document.querySelector('#recTipo button.on').dataset.t; const txt=$('#recTexto').value; const vias=+$('#recVias').value;
-  const titulo={receita:'Receituário',atestado:'Atestado médico',declaracao:'Declaração de comparecimento',encaminhamento:'Encaminhamento'}[tipo];
-  const um = cabecalhoImp()+`<h3>${titulo}</h3>${pacLinha(p)}<p style="min-height:${tipo==='receita'?'300':'160'}px;margin-top:14px">${esc(txt)}</p>`+assinatura();
-  imprimir(vias===2 ? um+'<div style="page-break-after:always"></div>'+um : um, titulo); }
+function imprimirPrescricao(id){ const p=S.pacientes[id]; const rx=vals(p.prescricoes).filter(r=>r.status!=='suspenso'); imprimir(`<div class="pg">`+cabecalhoImp()+`<h3 class="tit">PRESCRIÇÃO INTERNA</h3>${pacLinha(p)}<div class="corpo rec">${rx.map((r,i)=>`${i+1}) ${esc(r.droga)} ${esc(r.dose||'')} — ${esc(r.via)} · ${esc(r.freq)}${r.obs?' — '+esc(r.obs):''}${r.adminPor?'   ✓ '+fmtHora(r.adminT)+' '+esc(r.adminPor):''}`).join('\n')}</div>`+rodapeImp()+`</div>`, 'Prescrição'); }
+function modalReceita(id){ const p=S.pacientes[id]; S.recTipo='receita';
+  openModal(`<h2>Documentos — ${esc(p.nome)}</h2><div class="stack">
+    <div class="seg" id="recTipo">${[['receita','Receituário'],['atestado','Atestado médico'],['declaracao','Declaração'],['encaminhamento','Encaminhamento']].map(([k,l])=>`<button type="button" class="${k==='receita'?'on':''}" data-t="${k}" onclick="S.recTipo='${k}';document.querySelectorAll('#recTipo button').forEach(x=>x.classList.toggle('on',x===this));$('#recBody').innerHTML=recBody('${id}')">${l}</button>`).join('')}</div>
+    <div id="recBody">${recBody(id)}</div>
+  </div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="imprimirReceita('${id}')">Imprimir</button></div>`, true); }
+function recBody(id){ const p=S.pacientes[id], t=S.recTipo, a=p.atendimento||{};
+  if (t==='atestado') return `<div class="row"><div class="field"><label for="atDias">Dias de afastamento</label><input id="atDias" type="number" min="1" value="${esc((p.conduta||{}).atestado||'1')}"></div><div class="field"><label for="atCID">CID-10 (opcional)</label><input id="atCID" value="${esc((a.hd||'').match(/^[A-Z]\\d{2}(\\.\\d)?/)?.[0]||'')}"></div><div class="field"><label for="atHora">Hora do atendimento</label><input id="atHora" value="${fmtHora(p.inicioAtend||p.chegada)}"></div></div><p class="hint">Sai no modelo oficial da UPA: "Atesto para os devidos fins… deverá permanecer afastado(a)… por N (por extenso) dia(s) de repouso por motivos de doença."</p>`;
+  if (t==='declaracao') return `<div class="row"><div class="field"><label for="dcIni">Das</label><input id="dcIni" value="${fmtHora(p.chegada)}"></div><div class="field"><label for="dcFim">Às</label><input id="dcFim" value="${fmtHora(p.saida||now())}"></div><div class="field"><label for="dcAcomp">Acompanhante (opcional)</label><input id="dcAcomp" placeholder="nome do acompanhante"></div></div>`;
+  return `<div class="field"><label for="recTexto">${t==='receita'?'Prescrição para casa':'Texto do encaminhamento'}</label>${tplBar(t==='receita'?'receita':'encaminhamento',id,'recTexto')}<textarea id="recTexto" style="min-height:220px" placeholder="${t==='receita'?'1) Dipirona 500 mg — 1 cp VO 6/6 h se dor ou febre, por 3 dias\\n2) ...':'Encaminho o(a) paciente para avaliação de ... devido a ...'}"></textarea></div>${t==='receita'?`<div class="row"><div class="field"><label for="recVias">Vias</label><select id="recVias"><option value="1">1 via</option><option value="2">2 vias (controlado)</option></select></div></div>`:''}`; }
+function imprimirReceita(id){ const p=S.pacientes[id]; const t=S.recTipo; const nome=esc(p.nome.toUpperCase());
+  let corpo='', titulo='';
+  if (t==='receita'){ titulo='RECEITUÁRIO'; corpo=`<p style="font-size:14px;margin:0 0 10px"><b>Paciente:</b> ${nome}${p.nasc?' &nbsp;·&nbsp; '+idade(p.nasc):''}${p.cpf?' &nbsp;·&nbsp; CPF '+esc(p.cpf):''}</p><div class="corpo rec">${esc($('#recTexto').value)}</div>`; }
+  else if (t==='atestado'){ titulo='ATESTADO MÉDICO'; const d=+$('#atDias').value||1, cid=$('#atCID').value.trim(), h=$('#atHora').value;
+    corpo=`<div class="corpo">Atesto para os devidos fins, a pedido que o (a) Sr.(a): <span class="ln" style="width:250px;text-align:center"><b>${nome}</b></span>
+<span class="ln" style="width:100%">${p.cpf?'CPF '+esc(p.cpf):''}${p.rg?' · RG '+esc(p.rg):''}</span>
+Compareceu e recebeu atendimento nesta Unidade de Pronto Atendimento - UPA 24 Horas, na data de hoje, <span class="ln"><b>${fmtData(now())}</b></span>, às <span class="ln"><b>${esc(h)}</b></span> e deverá permanecer afastado (a) de suas atividades laborais à partir desta data por <span class="ln"><b>${d}</b></span> (<span class="ln" style="width:170px;text-align:center"><b>${extenso(d)}</b></span>) dia (s) de repouso por motivos de doença.
+
+CID 10 <span class="ln" style="width:130px;text-align:center"><b>${esc(cid)}</b></span>.</div>
+<div class="obs">Obs.: É vedado ao médico revelar o CID e diagnóstico, salvo se autorizado pelo paciente ou responsável legal, conforme art. 73 do Código de Ética Médica.</div>
+<div class="asspac">ASSINATURA DO PACIENTE OU RESPONSÁVEL</div>`; }
+  else if (t==='declaracao'){ titulo='DECLARAÇÃO DE COMPARECIMENTO'; const ac=$('#dcAcomp').value.trim();
+    corpo=`<div class="corpo">Declaro para os devidos fins que o (a) Sr.(a): <span class="ln" style="width:250px;text-align:center"><b>${nome}</b></span>${p.cpf?', CPF <b>'+esc(p.cpf)+'</b>,':''} compareceu a esta Unidade de Pronto Atendimento - UPA 24 Horas na data de hoje, <span class="ln"><b>${fmtData(now())}</b></span>, das <span class="ln"><b>${esc($('#dcIni').value)}</b></span> às <span class="ln"><b>${esc($('#dcFim').value)}</b></span>${ac?`, acompanhado (a) por <span class="ln" style="width:220px;text-align:center"><b>${esc(ac.toUpperCase())}</b></span>`:''}.</div>`; }
+  else { titulo='ENCAMINHAMENTO'; corpo=`<p style="font-size:14px;margin:0 0 10px"><b>Paciente:</b> ${nome}${p.nasc?' &nbsp;·&nbsp; '+idade(p.nasc):''}${p.cns?' &nbsp;·&nbsp; CNS '+esc(p.cns):''}</p><div class="corpo">${esc($('#recTexto').value)}</div>`; }
+  const pg=`<div class="pg">${cabecalhoImp()}<h3 class="tit">${titulo}</h3>${corpo}${rodapeImp()}</div>`;
+  const vias = t==='receita' ? +$('#recVias').value : 1;
+  imprimir(vias===2?pg+pg:pg, titulo); }
 function idadeAMD(nasc){ if(!nasc) return '—'; const d=new Date(nasc+'T12:00'), n=new Date(); let a=n.getFullYear()-d.getFullYear(), m=n.getMonth()-d.getMonth(), dd=n.getDate()-d.getDate(); if(dd<0){ m--; dd+=new Date(n.getFullYear(),n.getMonth(),0).getDate(); } if(m<0){ a--; m+=12; } return `${String(a).padStart(2,'0')} Ano(s) ${String(m).padStart(2,'0')} Mes(es) ${String(dd).padStart(2,'0')} Dia(s)`; }
 function imprimirFicha(id){ const p=S.pacientes[id], t=p.triagem||{}, a=p.atendimento||{}, u=unidade();
   const rx=vals(p.prescricoes).filter(r=>r.status!=='suspenso').sort((x,y)=>x.t-y.t), lab=vals(p.examesLab), img=vals(p.examesImg), ev=vals(p.evolucoes).sort((x,y)=>x.t-y.t);
@@ -1140,7 +1174,7 @@ function imprimirFicha(id){ const p=S.pacientes[id], t=p.triagem||{}, a=p.atendi
   const labVal=n=>{ const e=lab.find(x=>norm(x.tipo).includes(norm(n))&&x.status==='liberado'); return e?e.laudo:''; };
   const outrosEx=[...lab,...img].filter(e=>e.status==='liberado'&&!['leucocitos','hb','ht','plaquetas','hemograma'].some(k=>norm(e.tipo).includes(k)));
   const html=`<div class="ficha">
-  <div class="cab"><div class="lg">${cfg().logo?`<img src="${cfg().logo}">`:''}</div><div class="tit"><div>PREFEITURA MUNICIPAL DE TAQUARITINGA - SP</div><div>${esc(u.nome)}</div><div class="sub">Ficha de Atendimento</div></div><div class="lg r">${cfg().logo2?`<img src="${cfg().logo2}">`:'<div class="upa">UPA<br><span>24h</span></div>'}</div></div>
+  ${cabecalhoImp()}<div style="text-align:center;font-weight:bold;font-size:13px;margin:-6px 0 6px;letter-spacing:2px">FICHA DE ATENDIMENTO</div>
   <div class="l">DATA: <b>${fmtData(p.chegada)}</b> HORA: <b>${new Date(p.chegada).toLocaleTimeString('pt-BR')}</b> USUÁRIO EMISSOR: <b>${esc((p.recepcaoPor||S.me.nome).toUpperCase())}</b></div>
   <div class="l">NÃO É ACIDENTE: ${cb(!p.tipo||p.tipo==='nao')} &nbsp;&nbsp; TRÂNSITO: ${cb(p.tipo==='transito')} &nbsp;&nbsp; TRABALHO: ${cb(p.tipo==='trabalho')} <span class="r"><b>Nº DO ATENDIMENTO: ${p.numero||'—'}</b></span></div>
   <div class="l big">CÓD: ${esc(String(p.numero||'—'))} - <b>${esc(p.nome.toUpperCase())}</b></div>
@@ -1172,9 +1206,8 @@ function imprimirFicha(id){ const p=S.pacientes[id], t=p.triagem||{}, a=p.atendi
   ${p.conduta?`<div class="l" style="margin-top:8px">DESFECHO: <b>${STATUS[p.status]}</b> ${esc(p.conduta.texto||'')} ${p.conduta.atestado?'· Atestado '+esc(p.conduta.atestado)+' dia(s)':''} ${p.conduta.retorno?'· Retorno: '+esc(p.conduta.retorno):''}</div>`:''}
   </div>`;
   const w=window.open('','_blank'); w.document.write(`<html><head><meta charset="utf-8"><title>Ficha ${esc(p.nome)}</title><style>
-  @page{size:A4;margin:10mm}body{margin:0;font-family:'Courier New',monospace;font-size:11.5px;color:#000}.ficha{max-width:760px;margin:auto;padding:8px 12px}
-  .cab{display:flex;align-items:center;gap:10px;margin-bottom:6px}.cab .lg{width:90px;text-align:left}.cab .lg.r{text-align:right}.cab img{max-height:70px;max-width:90px}.cab .tit{flex:1;text-align:center;font-weight:bold;font-size:13px;line-height:1.35}.cab .sub{font-weight:normal;font-size:13px}
-  .upa{display:inline-block;font:900 20px Arial;line-height:1;text-align:right}.upa span{font-size:16px}
+  ${CSS_IMP.replace(/body\{[^}]*\}/,'')}@page{size:A4;margin:8mm}body{margin:0;font-family:'Courier New',monospace;font-size:11.5px;color:#000}.ficha{max-width:194mm;margin:auto;padding:8px 14px;border:1.5px solid #000}
+  .cab .pref{font-size:15px}.cab img.upa{height:44px}.upatxt{font-size:26px}.cab .un{font-size:13px}.cab .end{font-size:12px}hr.cabhr{margin:6px 0 8px}
   .l{margin:3px 0;line-height:1.45}.l.big{font-size:14px;margin:6px 0}.r{float:right}
   .cb{display:inline-block;width:12px;height:12px;border:1.5px solid #000;text-align:center;line-height:11px;font-weight:bold;font-size:10px;vertical-align:middle}
   .ln{display:inline-block;border-bottom:1px solid #000;height:12px;vertical-align:bottom}
@@ -1222,11 +1255,14 @@ function admUnidade(){ const u=unidade(), s=setores();
   return `<div class="stack" style="max-width:560px">
     <div class="row"><div class="field"><label for="uCod">Código CNES</label><input id="uCod" value="${esc(u.codigo)}"></div><div class="field"><label for="uNome">Nome da unidade</label><input id="uNome" value="${esc(u.nome)}"></div></div>
     <div class="field"><label for="uCid">Cidade</label><input id="uCid" value="${esc(u.cidade||'')}"></div>
+    <div class="field"><label for="uPref">Linha 1 do cabeçalho (prefeitura)</label><input id="uPref" value="${esc(u.prefeitura||UNIDADE_PADRAO.prefeitura)}"></div>
+    <div class="field"><label for="uNomeC">Nome completo da unidade</label><input id="uNomeC" value="${esc(u.nomeCompleto||UNIDADE_PADRAO.nomeCompleto)}"></div>
+    <div class="row"><div class="field"><label for="uEnd">Endereço</label><input id="uEnd" value="${esc(u.endereco||UNIDADE_PADRAO.endereco)}"></div><div class="field"><label for="uTel">Telefone</label><input id="uTel" value="${esc(u.telefone||UNIDADE_PADRAO.telefone)}"></div></div>
     <div class="row"><div class="field"><label for="uEmerg">Leitos de emergência</label><input id="uEmerg" type="number" min="0" value="${s.emergencia}"></div><div class="field"><label for="uObs">Leitos de observação</label><input id="uObs" type="number" min="0" value="${s.observacao}"></div></div>
-    <div class="field"><label for="uLogo">Logo / brasão (esquerda, aparece nas impressões)</label><input id="uLogo" type="file" accept="image/*" onchange="carregarLogo(this,'logo')" style="padding:8px">${cfg().logo?`<div style="display:flex;gap:10px;align-items:center;margin-top:6px"><img src="${cfg().logo}" style="height:56px;background:#fff;padding:4px;border-radius:8px"><button class="btn ghost xs" onclick="DB.set('config/logo',null)">Remover</button></div>`:''}</div>
-    <div class="field"><label for="uLogo2">Logo UPA 24h (direita da ficha)</label><input id="uLogo2" type="file" accept="image/*" onchange="carregarLogo(this,'logo2')" style="padding:8px">${cfg().logo2?`<div style="display:flex;gap:10px;align-items:center;margin-top:6px"><img src="${cfg().logo2}" style="height:56px;background:#fff;padding:4px;border-radius:8px"><button class="btn ghost xs" onclick="DB.set('config/logo2',null)">Remover</button></div>`:''}</div>
+    <div class="field"><label for="uLogo">Brasão da prefeitura (cantos do cabeçalho)</label><input id="uLogo" type="file" accept="image/*" onchange="carregarLogo(this,'logo')" style="padding:8px">${cfg().logo?`<div style="display:flex;gap:10px;align-items:center;margin-top:6px"><img src="${cfg().logo}" style="height:56px;background:#fff;padding:4px;border-radius:8px"><button class="btn ghost xs" onclick="DB.set('config/logo',null)">Remover</button></div>`:''}</div>
+    <div class="field"><label for="uLogo2">Logo UPA 24h (centro do cabeçalho)</label><input id="uLogo2" type="file" accept="image/*" onchange="carregarLogo(this,'logo2')" style="padding:8px">${cfg().logo2?`<div style="display:flex;gap:10px;align-items:center;margin-top:6px"><img src="${cfg().logo2}" style="height:56px;background:#fff;padding:4px;border-radius:8px"><button class="btn ghost xs" onclick="DB.set('config/logo2',null)">Remover</button></div>`:''}</div>
     <div style="display:flex;justify-content:flex-end"><button class="btn primary" onclick="salvarUnidade()">Salvar</button></div></div>`; }
-async function salvarUnidade(){ await DB.update('config',{unidade:{codigo:$('#uCod').value,nome:$('#uNome').value,cidade:$('#uCid').value}, setores:{emergencia:+$('#uEmerg').value||0, observacao:+$('#uObs').value||0}}); toast('Salvo','ok'); }
+async function salvarUnidade(){ await DB.update('config',{unidade:{codigo:$('#uCod').value,nome:$('#uNome').value,cidade:$('#uCid').value,prefeitura:$('#uPref').value,nomeCompleto:$('#uNomeC').value,endereco:$('#uEnd').value,telefone:$('#uTel').value}, setores:{emergencia:+$('#uEmerg').value||0, observacao:+$('#uObs').value||0}}); toast('Salvo','ok'); }
 function carregarLogo(inp,key){ const f=inp.files[0]; if(!f) return; const img=new Image(); img.onload=async()=>{ const c=document.createElement('canvas'); const s=Math.min(1,360/img.width, 360/img.height); c.width=img.width*s; c.height=img.height*s; c.getContext('2d').drawImage(img,0,0,c.width,c.height); await DB.set('config/'+(key||'logo'), c.toDataURL('image/png')); toast('Logo salvo','ok'); }; img.src=URL.createObjectURL(f); }
 
 /* ---------- tema ---------- */
