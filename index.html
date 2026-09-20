@@ -276,11 +276,13 @@ html[data-tema="escuro"] .ef .ops button.on{color:#07131d}
     <div class="logo"><i><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></i><div><b>Gestão da Saúde</b><small id="sideUnidade">Unidade</small></div></div>
     <nav id="nav"></nav>
     <div id="me"><div class="av" id="meAv"></div><div style="flex:1;min-width:0"><b id="meNome"></b><small id="mePerfil"></small></div><button class="btn ghost xs" onclick="logout()" aria-label="Sair">Sair</button></div>
+    <button class="btn ghost xs hidden" id="btnTesteSide" onclick="toggleTeste()" style="width:100%">Modo teste</button>
   </aside>
   <div>
     <header id="top">
       <label class="search"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="busca" placeholder="Buscar paciente por nome, CNS ou CPF" oninput="onBusca(this.value)"></label>
       <span class="spacer"></span>
+      <button class="btn warn sm hidden" id="btnTeste" onclick="toggleTeste()" title="Desligar modo teste">MODO TESTE</button>
       <span class="sync" id="sync"><i></i><span>conectando…</span></span>
       <button class="btn ghost sm" id="btnTema" onclick="toggleTema()" aria-label="Alternar tema" title="Modo claro/escuro"></button>
       <button class="btn primary sm" onclick="modalEntrada()" id="btnEntrada"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span class="no-mobile">Nova entrada</span></button>
@@ -554,6 +556,7 @@ async function doCadastroFB(){
 }
 function entrar(u){
   S.me = u; if (DB.local) localStorage.setItem('gsaude_sess', u.id);
+  S.teste = u.admin && localStorage.getItem('gsaude_teste')==='1';
   S.sessao = uid();
   DB.set('sessoes/'+u.id, { token:S.sessao, t:now(), disp: navigator.userAgent.slice(0,80) });
   unsubSess = DB.on('sessoes/'+u.id+'/token', tk => { if (tk && S.sessao && tk !== S.sessao) { S.sessao=null; alert('Sua conta foi aberta em outro dispositivo. Esta sessão será encerrada.'); logout(true); } });
@@ -570,7 +573,8 @@ function entrar(u){
 }
 function logout(manter){ if (unsubSess) { unsubSess(); unsubSess=null; } if (S.me && S.sessao && !manter) DB.remove('sessoes/'+S.me.id); S.sessao=null; if (DB.local) localStorage.removeItem('gsaude_sess'); else if (DB.auth) DB.auth.signOut(); S.me=null; unsub.forEach(f=>f()); unsub=[]; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lPass').value=''; }
 function homeDe(p){ return ({medico:'fila', enfermagem:'triagem', tecnico:'medicacoes', radiologia:'imagem', laboratorio:'laboratorio', recepcao:'painel'})[p] || 'painel'; }
-const can = (...perfis) => !!S.me && perfis.includes(S.me.perfil);           // clínico: perfil manda, admin NÃO dá bypass
+const modoTeste = () => !!(S.me && S.me.admin && S.teste);
+const can = (...perfis) => !!S.me && (perfis.includes(S.me.perfil) || modoTeste());   // clínico: perfil manda; admin pode ligar o modo teste
 const canAdm = (...perfis) => !!S.me && (S.me.admin || perfis.includes(S.me.perfil)); // administrativo/visualização
 const isEnf = () => can('enfermagem','tecnico');
 const isMed = () => can('medico');
@@ -619,7 +623,7 @@ function menu(){
   $('#bottom').innerHTML = mob.map(x=>`<button class="${S.view===x.id?'on':''}" onclick="${x.id==='mais'?'modalMais()':`go('${x.id}')`}">${x.i.replace(/width="18" height="18"/,'width="22" height="22"')}${x.t.split(' ')[0]}${x.badge?`<span class="badge">${x.badge}</span>`:''}</button>`).join('');
 }
 function modalMais(){
-  openModal(`<h2>Menu</h2><div class="stack">${menuItems().map(x=>`<button class="btn ghost block" style="justify-content:flex-start" onclick="closeModal();go('${x.id}')">${x.t}${x.badge?` <span class="tag acc">${x.badge}</span>`:''}</button>`).join('')}<button class="btn ghost block" style="justify-content:flex-start" onclick="toggleTema()">${temaAtual()==='escuro'?'Modo claro':'Modo escuro'}</button><button class="btn danger block" onclick="closeModal();logout()">Sair (${esc(S.me.nome)})</button></div>`);
+  openModal(`<h2>Menu</h2><div class="stack">${menuItems().map(x=>`<button class="btn ghost block" style="justify-content:flex-start" onclick="closeModal();go('${x.id}')">${x.t}${x.badge?` <span class="tag acc">${x.badge}</span>`:''}</button>`).join('')}<button class="btn ghost block" style="justify-content:flex-start" onclick="toggleTema()">${temaAtual()==='escuro'?'Modo claro':'Modo escuro'}</button>${S.me.admin?`<button class="btn ${S.teste?'warn':'ghost'} block" style="justify-content:flex-start" onclick="toggleTeste()">${S.teste?'Desligar modo teste':'Ligar modo teste (todas as etapas)'}</button>`:''}<button class="btn danger block" onclick="closeModal();logout()">Sair (${esc(S.me.nome)})</button></div>`);
 }
 function go(v, param){ flushSave(); S.view = v; S.param = param ?? null; window.scrollTo(0,0); if (v==='paciente' && param) auditar(param,'abriu a ficha'); render(); }
 function onBusca(v){ S.busca = v; if (!v) S.arquivo = null; if (v && S.view!=='busca') S.view='busca'; if (!v && S.view==='busca') S.view = homeDe(S.me.perfil); render(); }
@@ -635,6 +639,8 @@ function renderSoft(){
 }
 function render(){
   if (!S.me) return;
+  const bt=$('#btnTeste'); if (bt) bt.classList.toggle('hidden', !modoTeste());
+  const bs=$('#btnTesteSide'); if (bs) { bs.classList.toggle('hidden', !S.me.admin); bs.textContent = S.teste?'⚠ Modo teste ligado — desligar':'Ligar modo teste'; bs.className = 'btn xs '+(S.teste?'warn':'ghost'); bs.style.width='100%'; }
   menu();
   const V = { painel:vPainel, fila:vFila, triagem:vTriagem, medicacoes:vMedicacoes, setores:vSetores, laboratorio:vLab, imagem:vImg, historico:vHistorico, relatorio:vRelatorio, admin:vAdmin, paciente:vPaciente, busca:vBusca };
   $('#main').innerHTML = (V[S.view] || vPainel)();
@@ -693,7 +699,7 @@ async function iniciarAtend(id){
   await evento(id, (p.status==='reavaliacao'?'Reavaliação médica iniciada':'Início do atendimento médico') + ' às ' + fmtHora(now()) + ' — ' + S.me.nome); await auditar(id,'iniciou atendimento');
   go('paciente', id);
 }
-async function evento(id, texto){ await DB.push('pacientes/'+id+'/eventos', { t: now(), texto, por: S.me.nome, perfil: S.me.perfil }); }
+async function evento(id, texto){ await DB.push('pacientes/'+id+'/eventos', { t: now(), texto: texto + (modoTeste()?' [modo teste]':''), por: S.me.nome, perfil: S.me.perfil }); }
 async function auditar(id, acao){ if (!S.me) return; const p=S.pacientes[id]; const ult = vals(p&&p.acessos).sort((a,b)=>b.t-a.t)[0];
   if (ult && ult.uid===S.me.id && ult.acao===acao && now()-ult.t < 10*60000) return;   // evita repetir a cada render
   await DB.push('pacientes/'+id+'/acessos', { t:now(), acao, por:S.me.nome, uid:S.me.id, perfil:S.me.perfil }); }
@@ -1392,6 +1398,13 @@ const SOL='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="c
 const LUA='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
 function temaAtual(){ return document.documentElement.getAttribute('data-tema') || 'claro'; }
 function aplicarTema(t){ document.documentElement.setAttribute('data-tema', t); const b=$('#btnTema'); if (b) b.innerHTML = t==='escuro' ? SOL : LUA; const mt=document.querySelector('meta[name="theme-color"]'); if (mt) mt.content = t==='escuro' ? '#0f161d' : '#1d5a8f'; }
+function toggleTeste(){
+  if (!S.me || !S.me.admin) return;
+  S.teste = !S.teste;
+  if (S.teste) localStorage.setItem('gsaude_teste','1'); else localStorage.removeItem('gsaude_teste');
+  closeModal(); render();
+  toast(S.teste ? 'Modo teste ligado — você pode executar todas as etapas' : 'Modo teste desligado', 'ok');
+}
 function toggleTema(){ const t = temaAtual()==='escuro' ? 'claro' : 'escuro'; localStorage.setItem('gsaude_tema', t); aplicarTema(t); closeModal(); }
 aplicarTema(localStorage.getItem('gsaude_tema') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'escuro' : 'claro'));
 
