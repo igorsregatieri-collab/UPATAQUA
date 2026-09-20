@@ -417,6 +417,8 @@ function makeLocalDB(){
     update: async (p, obj) => { Object.entries(obj).forEach(([k,v]) => setPath(p + '/' + k, v)); persist(); },
     push: async (p, v) => { const id = uid(); setPath(p + '/' + id, v); persist(); return id; },
     remove: async p => { setPath(p, null); persist(); },
+    onJanela(p, campo, desde, cb){ return this.on(p, v => cb(v)); },
+    buscaTudo: async p => structuredClone(get(p) ?? null),
     incr: async p => { const v = (get(p)||0)+1; setPath(p, v); persist(); return v; },
     connected: cb => cb(true)
   };
@@ -433,6 +435,8 @@ function makeFirebaseDB(){
     update: (p, obj) => db.ref(p).update(obj),
     push: async (p, v) => { const r = db.ref(p).push(); await r.set(v); return r.key; },
     remove: p => db.ref(p).remove(),
+    onJanela(p, campo, desde, cb){ const q = db.ref(p).orderByChild(campo).startAt(desde); const h = sn => cb(sn.val()); q.on('value', h, e => { console.warn('janela', e.code); db.ref(p).on('value', h); }); return () => q.off('value', h); },
+    buscaTudo: async p => (await db.ref(p).orderByChild('chegada').limitToLast(4000).once('value')).val(),
     incr: async p => { const r = await db.ref(p).transaction(v => (v||0)+1); return r.snapshot.val(); },
     connected: cb => db.ref('.info/connected').on('value', s => cb(!!s.val()))
   };
@@ -442,7 +446,7 @@ function makeFirebaseDB(){
    ESTADO
    ===================================================================== */
 const S = { me:null, usuarios:{}, pacientes:{}, config:null, modelos:{}, view:'painel', param:null, filtro:'todos', busca:'', tab:{}, ef:{}, adminTab:'usuarios', medQ:'', medSel:null };
-let unsub = [];
+let unsub = [], unsubSess = null;
 const cfg = () => S.config || {};
 const unidade = () => cfg().unidade || UNIDADE_PADRAO;
 const setores = () => cfg().setores || SETORES_PADRAO;
@@ -544,19 +548,26 @@ async function doCadastroFB(){
 }
 function entrar(u){
   S.me = u; if (DB.local) localStorage.setItem('gsaude_sess', u.id);
+  S.sessao = uid();
+  DB.set('sessoes/'+u.id, { token:S.sessao, t:now(), disp: navigator.userAgent.slice(0,80) });
+  unsubSess = DB.on('sessoes/'+u.id+'/token', tk => { if (tk && S.sessao && tk !== S.sessao) { S.sessao=null; alert('Sua conta foi aberta em outro dispositivo. Esta sessão será encerrada.'); logout(true); } });
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden');
   $('#meAv').textContent = ini(u.nome); $('#meNome').textContent = u.nome; $('#mePerfil').textContent = PERFIS[u.perfil] + (u.admin?' · admin':'');
   unsub.forEach(f=>f()); unsub = [];
-  unsub.push(DB.on('pacientes', p => { S.pacientes = p || {}; renderSoft(); }));
+  const desde = now() - 30*86400000;
+  unsub.push(DB.onJanela('pacientes','chegada', desde, p => { S.pacientes = p || {}; renderSoft(); }));
   unsub.push(DB.on('modelos', m => { S.modelos = m || {}; if (S.view==='paciente') renderSoft(); }));
+  if (u.admin) unsub.push(DB.on('sessoes', x => { S.sessoes = x || {}; if (S.view==='admin'&&S.adminTab==='backup') renderSoft(); }));
   if (u.admin) DB.once('config/medicamentos').then(m => { if (!m) seedPadrao(); });
   S.view = homeDe(u.perfil); render();
   setInterval(() => { if (['painel','fila','triagem','laboratorio','imagem','medicacoes','setores'].includes(S.view)) renderSoft(); }, 30000);
 }
-function logout(){ if (DB.local) localStorage.removeItem('gsaude_sess'); else if (DB.auth) DB.auth.signOut(); S.me=null; unsub.forEach(f=>f()); unsub=[]; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lPass').value=''; }
+function logout(manter){ if (unsubSess) { unsubSess(); unsubSess=null; } if (S.me && S.sessao && !manter) DB.remove('sessoes/'+S.me.id); S.sessao=null; if (DB.local) localStorage.removeItem('gsaude_sess'); else if (DB.auth) DB.auth.signOut(); S.me=null; unsub.forEach(f=>f()); unsub=[]; $('#app').classList.add('hidden'); $('#login').classList.remove('hidden'); $('#lPass').value=''; }
 function homeDe(p){ return ({medico:'fila', enfermagem:'triagem', tecnico:'medicacoes', radiologia:'imagem', laboratorio:'laboratorio', recepcao:'painel'})[p] || 'painel'; }
-const can = (...perfis) => S.me && (S.me.admin || perfis.includes(S.me.perfil));
+const can = (...perfis) => !!S.me && perfis.includes(S.me.perfil);           // clínico: perfil manda, admin NÃO dá bypass
+const canAdm = (...perfis) => !!S.me && (S.me.admin || perfis.includes(S.me.perfil)); // administrativo/visualização
 const isEnf = () => can('enfermagem','tecnico');
+const isMed = () => can('medico');
 
 /* =====================================================================
    NAVEGAÇÃO
@@ -584,14 +595,14 @@ function menuItems(){
   const nImg = P.reduce((s,x)=>s+vals(x.examesImg).filter(e=>e.status!=='liberado').length,0);
   return [
     {id:'painel', t:'Painel', i:I.painel, show:true},
-    {id:'fila', t:'Fila médica', i:I.fila, badge:n('fila')+n('reavaliacao'), show:a||['medico','enfermagem','recepcao'].includes(p)},
-    {id:'triagem', t:'Triagem', i:I.triagem, badge:n('triagem'), show:a||['enfermagem','tecnico','recepcao'].includes(p)},
-    {id:'medicacoes', t:'Medicações', i:I.med, badge:nMed, show:a||['enfermagem','tecnico','medico'].includes(p)},
+    {id:'fila', t:'Fila médica', i:I.fila, badge:n('fila')+n('reavaliacao'), show:true},
+    {id:'triagem', t:'Triagem', i:I.triagem, badge:n('triagem'), show:true},
+    {id:'medicacoes', t:'Medicações', i:I.med, badge:nMed, show:true},
     {id:'setores', t:'Setores / leitos', i:I.setor, badge:n('setor')+n('reavaliacao'), show:true},
-    {id:'laboratorio', t:'Laboratório', i:I.lab, badge:nLab, show:a||['laboratorio','medico','enfermagem','tecnico'].includes(p)},
-    {id:'imagem', t:'Imagem', i:I.img, badge:nImg, show:a||['radiologia','medico','enfermagem','tecnico'].includes(p)},
+    {id:'laboratorio', t:'Laboratório', i:I.lab, badge:nLab, show:true},
+    {id:'imagem', t:'Imagem', i:I.img, badge:nImg, show:true},
     {id:'historico', t:'Histórico', i:I.hist, show:true},
-    {id:'relatorio', t:'Relatórios', i:I.rel, show:a||p==='medico'||p==='enfermagem'},
+    {id:'relatorio', t:'Relatórios', i:I.rel, show:a||['medico','enfermagem'].includes(p)},
     {id:'admin', t:'Administração', i:I.adm, badge:Object.values(S.usuarios).filter(u=>!u.aprovado).length, show:a}
   ].filter(x=>x.show);
 }
@@ -604,8 +615,8 @@ function menu(){
 function modalMais(){
   openModal(`<h2>Menu</h2><div class="stack">${menuItems().map(x=>`<button class="btn ghost block" style="justify-content:flex-start" onclick="closeModal();go('${x.id}')">${x.t}${x.badge?` <span class="tag acc">${x.badge}</span>`:''}</button>`).join('')}<button class="btn ghost block" style="justify-content:flex-start" onclick="toggleTema()">${temaAtual()==='escuro'?'Modo claro':'Modo escuro'}</button><button class="btn danger block" onclick="closeModal();logout()">Sair (${esc(S.me.nome)})</button></div>`);
 }
-function go(v, param){ flushSave(); S.view = v; S.param = param ?? null; window.scrollTo(0,0); render(); }
-function onBusca(v){ S.busca = v; if (v && S.view!=='busca') S.view='busca'; if (!v && S.view==='busca') S.view = homeDe(S.me.perfil); render(); }
+function go(v, param){ flushSave(); S.view = v; S.param = param ?? null; window.scrollTo(0,0); if (v==='paciente' && param) auditar(param,'abriu a ficha'); render(); }
+function onBusca(v){ S.busca = v; if (!v) S.arquivo = null; if (v && S.view!=='busca') S.view='busca'; if (!v && S.view==='busca') S.view = homeDe(S.me.perfil); render(); }
 
 /* =====================================================================
    RENDER
@@ -669,13 +680,17 @@ function vFila(){
   <div class="card"><div class="list">${A.map(p=>itemPac(p, btn(p))).join('') || vazio('Fila vazia','Nenhum paciente aguardando consulta.')}</div></div>`;
 }
 async function iniciarAtend(id){
+  if (!isMed()) return toast('Apenas médicos podem atender','bad');
   const p = S.pacientes[id]; if (!p) return;
   if (p.status==='atendimento' && p.medicoId && p.medicoId!==S.me.id && !confirm(`Este paciente está em atendimento com ${p.medicoNome}. Assumir?`)) return;
   await DB.update('pacientes/'+id, { status:'atendimento', medicoId:S.me.id, medicoNome:S.me.nome, inicioAtend: p.inicioAtend || now() });
-  await evento(id, (p.status==='reavaliacao'?'Reavaliação médica':'Início do atendimento médico') + ' — ' + S.me.nome);
+  await evento(id, (p.status==='reavaliacao'?'Reavaliação médica iniciada':'Início do atendimento médico') + ' às ' + fmtHora(now()) + ' — ' + S.me.nome); await auditar(id,'iniciou atendimento');
   go('paciente', id);
 }
-async function evento(id, texto){ await DB.push('pacientes/'+id+'/eventos', { t: now(), texto, por: S.me.nome }); }
+async function evento(id, texto){ await DB.push('pacientes/'+id+'/eventos', { t: now(), texto, por: S.me.nome, perfil: S.me.perfil }); }
+async function auditar(id, acao){ if (!S.me) return; const p=S.pacientes[id]; const ult = vals(p&&p.acessos).sort((a,b)=>b.t-a.t)[0];
+  if (ult && ult.uid===S.me.id && ult.acao===acao && now()-ult.t < 10*60000) return;   // evita repetir a cada render
+  await DB.push('pacientes/'+id+'/acessos', { t:now(), acao, por:S.me.nome, uid:S.me.id, perfil:S.me.perfil }); }
 
 /* ---------- triagem ---------- */
 function vTriagem(){
@@ -713,6 +728,7 @@ function modalTriagem(id){
   <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn primary" onclick="salvarTriagem('${id}')">Salvar triagem</button></div>`);
 }
 async function salvarTriagem(id){
+  if (!isEnf()) return toast('Apenas enfermagem pode triar','bad');
   const r = document.querySelector('.risk-pick-btn.on'); if (!r) return toast('Escolha a classificação de risco','bad');
   const g = i => $('#'+i).value.trim();
   const tri = { t:now(), por:S.me.nome, risco:r.dataset.r, pa:g('tPA'), fc:g('tFC'), fr:g('tFR'), sat:g('tSat'), temp:g('tTemp'), gli:g('tGli'), dor:g('tDor'), peso:g('tPeso'), alt:g('tAlt'), gcs:g('tGcs'), comorb:[...document.querySelectorAll('#tCom .chip.on')].map(b=>b.textContent), medUso:g('tMedUso'), obs:g('tObs'), protocolo:$('#tProt').checked };
@@ -720,7 +736,7 @@ async function salvarTriagem(id){
   const upd = { triagem: tri, risco: tri.risco, queixa: g('tQueixa'), alergias: g('tAlerg') };
   if (p.status==='triagem') upd.status = 'fila';
   await DB.update('pacientes/'+id, upd);
-  await evento(id, `Triagem: ${RISCOS[tri.risco].n}${tri.protocolo?' · protocolo acionado':''} — ${S.me.nome}`);
+  await evento(id, `Triagem concluída às ${fmtHora(tri.t)}: ${RISCOS[tri.risco].n}${tri.protocolo?' · protocolo acionado':''} — ${S.me.nome}`); await auditar(id,'realizou triagem');
   closeModal(); toast('Triagem salva','ok');
 }
 
@@ -776,7 +792,7 @@ function vPaciente(){
   const abn = (k,v) => { v=parseFloat(String(v).replace(',','.')); if(isNaN(v)) return ''; return ({fc:v>100||v<50, fr:v>20||v<10, sat:v<94, temp:v>=37.8||v<35, gli:v>180||v<70, dor:v>=7})[k] ? 'abn':''; };
   const paAbn = () => { const m=(t.pa||'').match(/(\d+)\D+(\d+)/); return m && (+m[1]>=140||+m[2]>=90||+m[1]<90) ? 'abn':''; };
   const evs = vals(p.eventos).sort((a,b)=>a.t-b.t);
-  const tabs = [['atend','Atendimento'],['rx','Prescrição'],['lab','Laboratório'],['img','Imagem'],['evol','Evoluções'],['dados','Cadastro']];
+  const tabs = [['atend','Atendimento'],['rx','Prescrição'],['lab','Laboratório'],['img','Imagem'],['evol','Evoluções'],['hist','Histórico'],['dados','Cadastro'],['audit','Acessos']];
   const nPend = k => vals(p[k]).filter(x=>x.status!=='liberado' && x.status!=='administrado' && x.status!=='suspenso').length;
   const badge = k => { const n = k==='rx'?vals(p.prescricoes).filter(r=>r.status==='pendente').length : k==='lab'?nPend('examesLab') : k==='img'?nPend('examesImg') : 0; return n?` <span class="tag warn" style="padding:1px 7px">${n}</span>`:''; };
   const podeAlta = p.status==='setor' && p.plano==='alta' && !vals(p.prescricoes).some(r=>r.status==='pendente');
@@ -786,8 +802,8 @@ function vPaciente(){
     ${!fim && can('medico') ? (p.status!=='atendimento' || !meu ? `<button class="btn primary sm" onclick="iniciarAtend('${id}')">${p.status==='atendimento'?'Assumir':p.status==='reavaliacao'?'Reavaliar':'Iniciar atendimento'}</button>` : `<button class="btn ok sm" onclick="modalConduta('${id}')">Conduta / finalizar</button>`) : ''}
     ${!fim && isEnf() ? `<button class="btn ghost sm" onclick="modalTriagem('${id}')">${p.triagem?'Reclassificar':'Triar'}</button>`:''}
     ${!fim && isEnf() && p.status==='setor' ? (podeAlta ? `<button class="btn ok sm" onclick="altaEnf('${id}')">Dar alta</button>` : `<button class="btn warn sm" onclick="chamarReav('${id}')">Chamar reavaliação</button>`) : ''}
-    ${fim && S.me.admin ? `<button class="btn ghost sm" onclick="reabrir('${id}')">Reabrir</button>`:''}
-    ${can('medico')?`<button class="btn ghost sm" onclick="modalReceita('${id}')">Receituário</button>`:''}
+    ${fim && (S.me.admin||isMed()) ? `<button class="btn ghost sm" onclick="reabrir('${id}')">Reabrir</button>`:''}
+    ${isMed()?`<button class="btn ghost sm" onclick="modalReceita('${id}')">Receituário</button>`:''}
     <button class="btn ghost sm" onclick="imprimirFicha('${id}')">Ficha</button></div>
   <div class="card" style="margin-bottom:14px"><div class="bd pt-head">
     <span class="risk ${p.risco||'none'}">${p.risco||'—'}</span>
@@ -797,7 +813,7 @@ function vPaciente(){
   <div class="grid2">
     <div class="card">
       <div class="tabs no-print">${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="S.tab['${id}']='${k}';render()">${l}${badge(k)}</button>`).join('')}</div>
-      <div class="bd">${({atend:tabAtend, rx:tabRx, lab:tabLab, img:tabImg, evol:tabEvol, dados:tabDados})[tab](p,id)}</div>
+      <div class="bd">${({atend:tabAtend, rx:tabRx, lab:tabLab, img:tabImg, evol:tabEvol, hist:tabHist, dados:tabDados, audit:tabAudit})[tab](p,id)}</div>
     </div>
     <div class="stack">
       <div class="card"><div class="hd"><h3>Sinais vitais</h3><span class="hint">${t.t?'triagem '+fmtHora(t.t):'sem triagem'}</span></div><div class="bd vitals">
@@ -825,7 +841,7 @@ function tplBar(tipo, id, campo){
 }
 function usarModelo(tipo,k,campo,id){ const m=S.modelos[tipo][k]; const t=$('#'+campo); if(!t) return; t.value = (t.value.trim() ? t.value.replace(/\s+$/,'')+'\n' : '') + m.texto; t.focus(); if($('#aHDA')) autoSalvar(id); }
 async function salvarModelo(tipo,campo){ const t=$('#'+campo); if(!t||!t.value.trim()) return toast('Escreva o texto no campo antes de salvar como modelo','bad'); const nome=prompt('Nome do modelo'); if(!nome) return; await DB.push('modelos/'+tipo, {nome:nome.trim(), texto:t.value.trim(), por:S.me.nome, uid:S.me.id, t:now()}); toast('Modelo salvo — visível para toda a equipe','ok'); }
-async function apagarModelo(tipo,k){ if(!confirm('Apagar este modelo?')) return; await DB.remove(`modelos/${tipo}/${k}`); }
+async function apagarModelo(tipo,k){ const m=S.modelos[tipo][k]; if (m.uid===S.me.id) { if(!confirm('Apagar este modelo?')) return; return DB.remove(`modelos/${tipo}/${k}`); } pedirSenhaAdmin('Apagar modelo de outro usuário.',()=>DB.remove(`modelos/${tipo}/${k}`)); }
 function tabAtend(p,id){
   const a = p.atendimento || {};
   const ro = !(can('medico') && p.status==='atendimento' && p.medicoId===S.me.id);
@@ -904,7 +920,7 @@ function rxFormHtml(id){ const m=S.medSel||{};
   <div class="row" style="grid-template-columns:1fr auto;align-items:end"><div class="field"><label for="rxObs">Diluição / observação</label><input id="rxObs" placeholder="ex.: diluir em SF 100 mL, correr em 20 min"></div><button class="btn primary" onclick="addRx('${id}')">Adicionar</button></div>`; }
 function renderMedSel(id){ $('#medSelBox').innerHTML = medSelHtml(id); }
 function selMed(id,k){ S.medSel = meds().find(m=>m.k===k); renderMedSel(id); $('#rxForm').innerHTML = rxFormHtml(id); $('#rxDose').focus(); }
-async function addRx(id){ const d=$('#rxDroga').value.trim(); if(!d) return toast('Escolha ou digite o medicamento','bad'); const p=S.pacientes[id];
+async function addRx(id){ if(!isMed()) return toast('Apenas médicos prescrevem','bad'); const d=$('#rxDroga').value.trim(); if(!d) return toast('Escolha ou digite o medicamento','bad'); const p=S.pacientes[id];
   if (p.alergias && norm(p.alergias)!=='nenhuma' && norm(p.alergias).split(/[,;\/]/).some(a=>a.trim().length>3&&norm(d).includes(a.trim().split(' ')[0])) && !confirm(`ATENÇÃO: paciente tem alergia registrada a "${p.alergias}". Prescrever mesmo assim?`)) return;
   const dose=$('#rxDose').value.trim(), via=$('#rxVia').value;
   await DB.push('pacientes/'+id+'/prescricoes', {droga:d, dose, via, freq:$('#rxFreq').value, obs:$('#rxObs').value.trim(), status:'pendente', t:now(), por:S.me.nome});
@@ -912,16 +928,17 @@ async function addRx(id){ const d=$('#rxDroga').value.trim(); if(!d) return toas
   if (!meds().some(m => norm(m.nome+' '+(m.apr||'')).trim()===norm(d) || norm(m.nome)===norm(d))) { await DB.push('modelos/medicamentos', {nome:d, apr:'', via, dose, por:S.me.nome, uid:S.me.id, t:now()}); toast('Item adicionado — medicamento salvo na lista para a próxima vez','ok'); }
   else toast('Item adicionado','ok');
   S.medSel=null; S.medQ=''; render(); }
-async function checarRx(id,k){ const p=S.pacientes[id], r=p.prescricoes[k];
+async function checarRx(id,k){ if(!isEnf()) return toast('Apenas enfermagem pode checar medicação','bad'); const p=S.pacientes[id], r=p.prescricoes[k];
   await DB.update(`pacientes/${id}/prescricoes/${k}`, {status:'administrado', adminPor:S.me.nome, adminT:now()});
-  await evento(id, 'Administrado: '+r.droga+' '+r.via+' — '+S.me.nome); toast('Administração checada','ok');
+  await evento(id, 'Administrado às '+fmtHora(now())+': '+r.droga+' '+r.via+' — '+S.me.nome); toast('Administração checada','ok');
   const restam = vals(p.prescricoes).filter(x=>x.k!==k && x.status==='pendente').length;
   if (!restam && p.status==='setor') {
     if (p.plano==='reavaliar') { await DB.update('pacientes/'+id, {status:'reavaliacao'}); await evento(id,'Medicações concluídas — encaminhado para reavaliação médica'); toast('Última medicação checada — paciente na fila de reavaliação','ok'); }
     else if (p.plano==='alta') toast('Última medicação checada — paciente liberado para alta','ok');
   }
 }
-async function suspenderRx(id,k){ const r=S.pacientes[id].prescricoes[k]; if(!confirm('Suspender '+r.droga+'?')) return; await DB.update(`pacientes/${id}/prescricoes/${k}`, {status:'suspenso'}); await evento(id, 'Suspenso: '+r.droga); }
+async function suspenderRx(id,k){ if(!isMed()) return toast('Apenas médicos suspendem prescrição','bad'); const r=S.pacientes[id].prescricoes[k]; if (r.status==='administrado') return toast('Item já administrado — não pode ser suspenso','bad'); if(!confirm('Suspender '+r.droga+'?')) return; await DB.update(`pacientes/${id}/prescricoes/${k}`, {status:'suspenso', suspPor:S.me.nome, suspT:now()}); await evento(id, 'Suspenso às '+fmtHora(now())+': '+r.droga+' — '+S.me.nome); }
+function excluirItem(id, sub, desc){ pedirSenhaAdmin('Excluir '+desc+' do prontuário. A ação fica registrada.', async (admNome)=>{ await DB.remove('pacientes/'+id+'/'+sub); await evento(id, 'EXCLUSÃO de '+desc+' autorizada por '+admNome+' — solicitada por '+S.me.nome); toast('Excluído','ok'); }); }
 
 /* ---------- exames: laboratório e imagem ---------- */
 function tabExames(p, id, key, catalogo, tipoLabel){
@@ -929,7 +946,7 @@ function tabExames(p, id, key, catalogo, tipoLabel){
   const medico = can('medico') && !FIM.includes(p.status);
   const isLab = key==='examesLab';
   const podeColeta = isLab ? isEnf() : can('radiologia');
-  const podeLiberar = isLab ? can('laboratorio','medico') : can('radiologia');
+  const podeLiberar = isLab ? can('laboratorio','enfermagem') : can('radiologia');
   const stTag = e => e.status==='liberado' ? '<span class="tag ok">Liberado</span>' : e.status==='coletado' ? '<span class="tag acc">Coletado</span>' : e.status==='execucao' ? '<span class="tag acc">Em execução</span>' : `<span class="tag ${e.prioridade==='urgente'?'bad':''}">${e.prioridade==='urgente'?'Urgente':'Pendente'}</span>`;
   return `<div class="stack">
     ${medico?`<div class="card inset"><div class="bd stack">
@@ -944,35 +961,47 @@ function tabExames(p, id, key, catalogo, tipoLabel){
       ${e.status==='pendente' && podeColeta ? `<button class="btn primary sm" onclick="checarExame('${id}','${key}','${e.k}')">${isLab?'Coletado':'Iniciar'}</button>`:''}
       ${e.status!=='liberado' && e.status!=='pendente' && podeLiberar ? `<button class="btn ok sm" onclick="modalLiberar('${id}','${key}','${e.k}')">Liberar</button>`:''}
       ${e.status==='pendente' && podeLiberar && !podeColeta ? `<button class="btn ok sm" onclick="modalLiberar('${id}','${key}','${e.k}')">Liberar</button>`:''}
-      ${e.status!=='liberado' && medico ? `<button class="btn ghost xs" onclick="if(confirm('Cancelar exame?'))DB.remove('pacientes/${id}/${key}/${e.k}')" aria-label="Cancelar">✕</button>`:''}
+      ${e.status!=='liberado' && medico ? `<button class="btn ghost xs" onclick="excluirItem('${id}','${key}/${e.k}','exame ${esc(e.tipo)}')" aria-label="Cancelar">✕</button>`:''}
     </div>`).join('') : vazio('Nenhum exame solicitado')}
   </div>`;
 }
 const tabLab = (p,id) => tabExames(p,id,'examesLab',labs(),'laboratório');
 const tabImg = (p,id) => tabExames(p,id,'examesImg',imgs(),'imagem / ECG');
 function toggleEx(n){ S.exSel = S.exSel||[]; const i=S.exSel.indexOf(n); i>=0?S.exSel.splice(i,1):S.exSel.push(n); render(); }
-async function addExames(id,key){ const outro=$('#exOutro').value.trim(); const pri=$('#exPri').value; const lista=[...(S.exSel||[])];
+async function addExames(id,key){ if(!isMed()) return toast('Apenas médicos solicitam exames','bad'); const outro=$('#exOutro').value.trim(); const pri=$('#exPri').value; const lista=[...(S.exSel||[])];
   const listaNomes = key==='examesLab'?labs():imgs();
   if (outro && !listaNomes.some(m=>norm(m.nome)===norm(outro)) && !lista.length) lista.push(outro);
   if (!lista.length) return toast('Selecione ao menos um exame','bad');
   const ind = (outro && lista.length && !lista.includes(outro)) ? outro : '';
   for (const t of lista) await DB.push(`pacientes/${id}/${key}`, {tipo:t, prioridade:pri, indicacao:ind, status:'pendente', t:now(), por:S.me.nome});
   await evento(id, (key==='examesLab'?'Laboratório solicitado: ':'Imagem solicitada: ')+lista.join(', ')); S.exSel=[]; $('#exOutro').value=''; render(); toast(lista.length+' exame(s) solicitado(s)','ok'); }
-async function checarExame(id,key,k){ const e=S.pacientes[id][key][k]; const isLab=key==='examesLab'; await DB.update(`pacientes/${id}/${key}/${k}`, {status:isLab?'coletado':'execucao', coletaPor:S.me.nome, coletaT:now()}); await evento(id, (isLab?'Coleta: ':'Exame iniciado: ')+e.tipo+' — '+S.me.nome); toast(isLab?'Coleta checada':'Exame em execução','ok'); }
+async function checarExame(id,key,k){ const isLab=key==='examesLab'; if (isLab && !isEnf()) return toast('Apenas enfermagem pode checar coleta','bad'); if (!isLab && !can('radiologia')) return toast('Apenas radiologia pode executar exames de imagem','bad'); const e=S.pacientes[id][key][k]; await DB.update(`pacientes/${id}/${key}/${k}`, {status:isLab?'coletado':'execucao', coletaPor:S.me.nome, coletaT:now()}); await evento(id, (isLab?'Coleta às ':'Exame iniciado às ')+fmtHora(now())+': '+e.tipo+' — '+S.me.nome); toast(isLab?'Coleta checada':'Exame em execução','ok'); }
 function modalLiberar(id,key,k){ const e=S.pacientes[id][key][k], p=S.pacientes[id];
   openModal(`<h2>Liberar resultado</h2><p class="hint" style="margin:-8px 0 14px">${esc(e.tipo)} · ${esc(p.nome)}</p><div class="field"><label for="exLaudo">Resultado / laudo / observação</label><textarea id="exLaudo" style="min-height:140px" placeholder="valores, laudo ou 'disponível no sistema'"></textarea></div><div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn ok" onclick="liberarExame('${id}','${key}','${k}')">Liberar</button></div>`); }
-async function liberarExame(id,key,k){ const e=S.pacientes[id][key][k]; await DB.update(`pacientes/${id}/${key}/${k}`, {status:'liberado', laudo:$('#exLaudo').value.trim(), liberadoPor:S.me.nome, liberadoT:now()}); await evento(id, 'Resultado liberado: '+e.tipo+' — '+S.me.nome); closeModal(); toast('Resultado liberado','ok'); }
+async function liberarExame(id,key,k){ const isLab=key==='examesLab'; if (isLab && !can('laboratorio','enfermagem')) return toast('Apenas laboratório/enfermagem libera resultado','bad'); if (!isLab && !can('radiologia')) return toast('Apenas radiologia libera imagem','bad'); const e=S.pacientes[id][key][k]; await DB.update(`pacientes/${id}/${key}/${k}`, {status:'liberado', laudo:$('#exLaudo').value.trim(), liberadoPor:S.me.nome, liberadoT:now()}); await evento(id, 'Resultado liberado às '+fmtHora(now())+': '+e.tipo+' — '+S.me.nome); closeModal(); toast('Resultado liberado','ok'); }
 
 /* ---------- evolução / cadastro ---------- */
 function tabEvol(p,id){
   const ev = vals(p.evolucoes).sort((a,b)=>b.t-a.t);
-  const pode = can('medico','enfermagem','tecnico') && !FIM.includes(p.status);
+  const pode = can('medico','enfermagem','tecnico','radiologia','laboratorio') && !FIM.includes(p.status);
   return `<div class="stack">${pode?`<div class="field"><label for="evTexto">Nova evolução (${PERFIS[S.me.perfil]})</label><textarea id="evTexto" style="min-height:80px" placeholder="Estado atual, resposta ao tratamento, plano…"></textarea></div><div style="display:flex;justify-content:flex-end"><button class="btn primary sm" onclick="addEvolucao('${id}')">Registrar evolução</button></div>`:''}
   ${ev.length?ev.map(e=>`<div class="rx"><div class="t"><b>${fmtDH(e.t)} — ${esc(e.por)} <span class="tag">${PERFIS[e.perfil]||''}</span></b><div style="white-space:pre-wrap;margin-top:4px;font-size:14px">${esc(e.texto)}</div></div></div>`).join(''):vazio('Sem evoluções registradas')}</div>`;
 }
 async function addEvolucao(id){ const t=$('#evTexto').value.trim(); if(!t) return; await DB.push('pacientes/'+id+'/evolucoes', {t:now(), texto:t, por:S.me.nome, perfil:S.me.perfil}); await evento(id, 'Evolução registrada — '+S.me.nome); toast('Evolução registrada','ok'); }
+function tabAudit(p,id){ const A=vals(p.acessos).sort((a,b)=>b.t-a.t);
+  return `<p class="hint" style="margin-top:0">Registro de quem acessou e o que fez neste atendimento (exigência de rastreabilidade/LGPD).</p><div style="overflow:auto"><table class="tb"><thead><tr><th>Data e hora</th><th>Profissional</th><th>Perfil</th><th>Ação</th></tr></thead><tbody>${A.map(a=>`<tr><td>${fmtDH(a.t)}</td><td>${esc(a.por)}</td><td>${PERFIS[a.perfil]||''}</td><td>${esc(a.acao)}</td></tr>`).join('')||'<tr><td colspan="4">Sem registros</td></tr>'}</tbody></table></div>`; }
+function tabHist(p,id){ const H=(S.historico&&S.historico[id])||null;
+  if (!H) return `<div class="stack"><p class="hint">Busca todas as passagens anteriores deste paciente pela unidade.</p><button class="btn primary" onclick="carregarHistorico('${id}')">Buscar atendimentos anteriores</button></div>`;
+  const outros = H.filter(x=>x.id!==id);
+  return `<div class="stack"><div style="display:flex;justify-content:space-between;align-items:center"><b>${outros.length} atendimento(s) anterior(es)</b><button class="btn ghost xs" onclick="delete S.historico['${id}'];render()">Atualizar</button></div>
+  ${outros.map(x=>{const a=x.atendimento||{}; return `<div class="rx"><span class="risk ${x.risco||'none'}" style="width:32px;height:32px;font-size:10px">${x.risco||'—'}</span><div class="t"><b>${fmtDH(x.chegada)} · ${STATUS[x.status]||x.status}${x.medicoNome?' · '+esc(x.medicoNome):''}</b><small>${esc(x.queixa||'')}${a.hd?' · HD: '+esc(a.hd):''}</small>${a.conduta?`<div style="margin-top:4px;font-size:13px">${esc(a.conduta)}</div>`:''}</div><button class="btn ghost xs" onclick="go('paciente','${x.id}')">Abrir</button></div>`;}).join('')||vazio('Primeira passagem do paciente pela unidade')}</div>`; }
+async function carregarHistorico(id){ const p=S.pacientes[id]; toast('Buscando…');
+  const todos = await DB.buscaTudo('pacientes') || {};
+  const cpf=(p.cpf||'').replace(/\D/g,''), cns=(p.cns||'').replace(/\D/g,''), nm=norm(p.nome);
+  const H = Object.entries(todos).map(([k,v])=>({id:k,...v})).filter(x => (cpf && (x.cpf||'').replace(/\D/g,'')===cpf) || (cns && (x.cns||'').replace(/\D/g,'')===cns) || (norm(x.nome)===nm && (!p.nasc || !x.nasc || x.nasc===p.nasc))).sort((a,b)=>b.chegada-a.chegada);
+  S.historico = S.historico||{}; S.historico[id]=H; render(); }
 function tabDados(p,id){
-  const ro = !can('recepcao','enfermagem','medico');
+  const ro = !canAdm('recepcao','enfermagem','medico');
   const f=(i,l,v,t='text')=>`<div class="field"><label for="${i}">${l}</label><input id="${i}" type="${t}" value="${esc(v||'')}" ${ro?'disabled':''}></div>`;
   return `<div class="stack"><div class="row" style="grid-template-columns:1fr 1fr">
     ${f('dNome','Nome',p.nome)}${f('dNasc','Nascimento',p.nasc,'date')}
@@ -1014,6 +1043,7 @@ function condBody(k,id){
   return `<div class="field"><label for="cOutro">Desfecho</label><select id="cOutro"><option value="evadiu">Evasão</option><option value="obito">Óbito</option></select></div>`;
 }
 async function salvarConduta(id){
+  if(!isMed()) return toast('Apenas médicos definem conduta','bad');
   let k = document.querySelector('#condSeg button.on').dataset.k;
   const p = S.pacientes[id], txt = ($('#cTexto').value||'').trim();
   const upd = {}; let ev='';
@@ -1037,6 +1067,22 @@ async function salvarConduta(id){
 }
 async function altaEnf(id){ const p=S.pacientes[id]; if(!confirm('Confirmar alta de '+p.nome+' (plano do médico: alta após medicação)?')) return; await DB.update('pacientes/'+id, {status:'alta', saida:now(), setor:null, leito:null, plano:null, conduta:{tipo:'alta', texto:'Alta após medicação conforme plano médico', t:now(), por:S.me.nome}}); await evento(id,'Alta após medicação — '+S.me.nome); toast('Alta registrada','ok'); go('setores'); }
 async function chamarReav(id){ await DB.update('pacientes/'+id, {status:'reavaliacao'}); await evento(id,'Reavaliação solicitada — '+S.me.nome); toast('Paciente na fila de reavaliação','ok'); }
+function pedirSenhaAdmin(msg, onOk){
+  openModal(`<h2>Confirmação de administrador</h2><p class="hint" style="margin:-8px 0 14px">${esc(msg)}</p>
+  <div class="field"><label for="admUser">Usuário admin</label><input id="admUser" value="${S.me.admin?esc(S.me.usuario):''}" autocapitalize="none"></div>
+  <div class="field"><label for="admPass">Senha</label><input id="admPass" type="password"></div>
+  <div id="admErr" class="err hidden" style="margin-top:10px"></div>
+  <div class="actions"><button class="btn ghost" onclick="closeModal()">Cancelar</button><button class="btn danger" id="admOk">Confirmar exclusão</button></div>`);
+  $('#admOk').onclick = async () => {
+    const u=norm($('#admUser').value.trim()), pw=$('#admPass').value; const err=$('#admErr');
+    const mostra=m=>{err.textContent=m;err.classList.remove('hidden')};
+    const us = await DB.once('usuarios')||{}; const ent = Object.entries(us).find(([k,x])=>x.usuario===u);
+    if (!ent || !ent[1].admin) return mostra('Usuário não é administrador.');
+    if (DB.local) { if (ent[1].senha !== await sha(pw)) return mostra('Senha incorreta.'); }
+    else { try { const cred = firebase.auth.EmailAuthProvider.credential(emailDe(u), pw); if (ent[0]===S.me.id) await DB.auth.currentUser.reauthenticateWithCredential(cred); else { const app2 = firebase.apps.find(a=>a.name==='verif') || firebase.initializeApp(FIREBASE_CONFIG,'verif'); await app2.auth().signInWithEmailAndPassword(emailDe(u), pw); await app2.auth().signOut(); } } catch(e){ return mostra('Senha incorreta.'); } }
+    closeModal(); onOk(ent[1].nome);
+  };
+}
 async function reabrir(id){ if(!confirm('Reabrir este atendimento?')) return; await DB.update('pacientes/'+id, {status:'reavaliacao', saida:null}); await evento(id,'Atendimento reaberto — '+S.me.nome); }
 function modalSetor(id){
   const p=S.pacientes[id];
@@ -1082,7 +1128,7 @@ function vExamesFila(key, titulo, sub){
   const rows=[]; ativos().forEach(p=>vals(p[key]).forEach(e=>rows.push({p,e})));
   const pend=rows.filter(x=>x.e.status!=='liberado').sort((a,b)=>(a.e.prioridade==='urgente'?0:1)-(b.e.prioridade==='urgente'?0:1)||a.e.t-b.e.t);
   const lib=rows.filter(x=>x.e.status==='liberado'&&x.e.liberadoT>hoje()).sort((a,b)=>b.e.liberadoT-a.e.liberadoT);
-  const podeColeta = isLab ? isEnf() : can('radiologia'); const podeLiberar = isLab ? can('laboratorio','medico') : can('radiologia');
+  const podeColeta = isLab ? isEnf() : can('radiologia'); const podeLiberar = isLab ? can('laboratorio','enfermagem') : can('radiologia');
   const card=({p,e})=>`<div class="item"><span class="tag ${e.status==='pendente'?(e.prioridade==='urgente'?'bad':''):'acc'}">${e.status==='pendente'?(e.prioridade==='urgente'?'Urgente':'Rotina'):e.status==='coletado'?'Coletado':'Em execução'}</span><div class="who"><b>${esc(e.tipo)}</b><small>${esc(p.nome)} · ${idade(p.nasc)}${local(p)?' · '+local(p):''} · ${esc(e.indicacao||'')} · sol. ${fmtHora(e.t)} por ${esc(e.por)}</small></div><span class="wait ${mins(e.t)>60?'late':mins(e.t)>30?'soon':''}">${fmtMin(mins(e.t))}</span>
     ${e.status==='pendente'&&podeColeta?`<button class="btn primary sm" onclick="checarExame('${p.id}','${key}','${e.k}')">${isLab?'Coletado':'Iniciar'}</button>`:''}
     ${(e.status!=='pendente'||!podeColeta)&&e.status!=='liberado'&&podeLiberar?`<button class="btn ok sm" onclick="modalLiberar('${p.id}','${key}','${e.k}')">Liberar</button>`:''}
@@ -1100,19 +1146,25 @@ function vHistorico(){
   return `<div class="page-h"><div><h1>Histórico do dia</h1><p>${fmtData(now())} · ${H.length} entradas</p></div></div>
   <div class="card" style="overflow:auto"><table class="tb"><thead><tr><th>Chegada</th><th>Paciente</th><th>Risco</th><th>Status</th><th>Médico</th><th>Saída</th><th></th></tr></thead><tbody>${H.map(p=>`<tr><td>${fmtHora(p.chegada)}</td><td><b>${esc(p.nome)}</b><br><small style="color:var(--mute)">${idade(p.nasc)} · ${esc(p.queixa||'')}</small></td><td><span class="risk ${p.risco||'none'}" style="width:32px;height:28px;font-size:10px">${p.risco||'—'}</span></td><td><span class="tag">${STATUS[p.status]}</span></td><td>${esc(p.medicoNome||'—')}</td><td>${fmtHora(p.saida)}</td><td><button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></td></tr>`).join('')||`<tr><td colspan="7">${vazio('Nenhuma entrada hoje')}</td></tr>`}</tbody></table></div>`;
 }
+function filtraBusca(lista){ const q=norm(S.busca), dig=S.busca.replace(/\D/g,'');
+  return lista.filter(p => norm(p.nome).includes(q) || (dig.length>3 && ((p.cns||'').replace(/\D/g,'').includes(dig) || (p.cpf||'').replace(/\D/g,'').includes(dig)))).sort((a,b)=>b.chegada-a.chegada); }
+async function buscaArquivo(){ toast('Buscando no histórico completo…'); const todos = await DB.buscaTudo('pacientes')||{}; S.arquivo = Object.entries(todos).map(([k,v])=>({id:k,...v})); render(); }
 function vBusca(){
-  const q = norm(S.busca), dig = S.busca.replace(/\D/g,'');
-  const R = pacs().filter(p => norm(p.nome).includes(q) || (dig && ((p.cns||'').replace(/\D/g,'').includes(dig) || (p.cpf||'').replace(/\D/g,'').includes(dig)))).sort((a,b)=>b.chegada-a.chegada).slice(0,50);
-  return `<div class="page-h"><div><h1>Busca</h1><p>${R.length} resultado(s) para "${esc(S.busca)}"</p></div><button class="btn ghost sm" onclick="modalEntrada({nome:S.busca})">Nova entrada com esse nome</button></div>
-  <div class="card"><div class="list">${R.map(p=>`<div class="item"><span class="risk ${p.risco||'none'}">${p.risco||'—'}</span><div class="who"><b>${esc(p.nome)}</b><small>${idade(p.nasc)}${p.cns?' · CNS '+esc(p.cns):''} · ${fmtDH(p.chegada)} · ${STATUS[p.status]}</small></div>${FIM.includes(p.status)?`<button class="btn ghost sm" onclick="modalEntrada(S.pacientes['${p.id}'])">Nova entrada</button>`:''}<button class="btn ghost sm" onclick="go('paciente','${p.id}')">Abrir</button></div>`).join('')||vazio('Nenhum paciente encontrado')}</div></div>`;
+  const base = S.arquivo && S.arquivo.length ? S.arquivo : pacs();
+  const R = filtraBusca(base).slice(0,60);
+  return `<div class="page-h"><div><h1>Busca</h1><p>${R.length} resultado(s) para "${esc(S.busca)}"${S.arquivo?' · histórico completo':' · últimos 30 dias'}</p></div><div class="chips">${S.arquivo?'':`<button class="btn ghost sm" onclick="buscaArquivo()">Buscar no histórico completo</button>`}<button class="btn ghost sm" onclick="modalEntrada({nome:S.busca})">Nova entrada com esse nome</button></div></div>
+  <div class="card"><div class="list">${R.map(p=>`<div class="item"><span class="risk ${p.risco||'none'}">${p.risco||'—'}</span><div class="who"><b>${esc(p.nome)}</b><small>${idade(p.nasc)}${p.cns?' · CNS '+esc(p.cns):''} · ${fmtDH(p.chegada)} · ${STATUS[p.status]}</small></div>${FIM.includes(p.status)?`<button class="btn ghost sm" onclick="reentrada('${p.id}')">Nova entrada</button>`:''}<button class="btn ghost sm" onclick="abrirArquivado('${p.id}')">Abrir</button></div>`).join('')||vazio('Nenhum paciente encontrado')}</div></div>`;
 }
+function achaPac(id){ return S.pacientes[id] || (S.arquivo||[]).find(x=>x.id===id); }
+function abrirArquivado(id){ if (!S.pacientes[id]) { const a=achaPac(id); if (a) S.pacientes[id]=a; } go('paciente',id); }
+function reentrada(id){ modalEntrada(achaPac(id)); }
 function vRelatorio(){
   const dias = 7, hoje0 = hoje(), out=[];
   for (let i=dias-1;i>=0;i--){ const d0=hoje0-i*86400000, d1=d0+86400000; const P=pacs().filter(p=>p.chegada>=d0&&p.chegada<d1); const esp=P.filter(p=>p.inicioAtend).map(p=>(p.inicioAtend-p.chegada)/60000); out.push({d:fmtData(d0), n:P.length, alta:P.filter(p=>p.status==='alta').length, transf:P.filter(p=>p.status==='transferido').length, esp: esp.length?Math.round(esp.reduce((a,b)=>a+b,0)/esp.length):null, risco: ORDEM_RISCO.map(r=>P.filter(p=>p.risco===r).length)}); }
   return `<div class="page-h"><div><h1>Relatórios</h1><p>Últimos ${dias} dias · ${out.reduce((s,x)=>s+x.n,0)} atendimentos</p></div><button class="btn ghost sm" onclick="exportCSV()">Exportar CSV</button></div>
   <div class="card" style="overflow:auto"><table class="tb"><thead><tr><th>Dia</th><th>Entradas</th><th>Altas</th><th>Transf.</th><th>Espera média</th><th>Verm</th><th>Lar</th><th>Ama</th><th>Verd</th><th>Azul</th></tr></thead><tbody>${out.map(x=>`<tr><td>${x.d}</td><td><b>${x.n}</b></td><td>${x.alta}</td><td>${x.transf}</td><td>${x.esp!=null?fmtMin(x.esp):'—'}</td>${x.risco.map(v=>`<td>${v}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
-function exportCSV(){ const P=pacs().sort((a,b)=>a.chegada-b.chegada); const h=['chegada','nome','nascimento','sexo','cns','risco','queixa','status','medico','inicio_atendimento','saida','hd','conduta']; const rows=P.map(p=>[fmtDH(p.chegada),p.nome,p.nasc||'',p.sexo||'',p.cns||'',p.risco||'',p.queixa||'',STATUS[p.status]||p.status,p.medicoNome||'',fmtDH(p.inicioAtend),fmtDH(p.saida),(p.atendimento||{}).hd||'',(p.conduta||{}).texto||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')); const csv='\ufeff'+h.join(';')+'\n'+rows.join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='atendimentos_'+fmtData(now()).replace(/\//g,'-')+'.csv'; a.click(); }
+function exportCSV(lista){ const P=(lista||pacs()).sort((a,b)=>a.chegada-b.chegada); const h=['chegada','nome','nascimento','sexo','cns','risco','queixa','status','medico','inicio_atendimento','saida','hd','conduta']; const rows=P.map(p=>[fmtDH(p.chegada),p.nome,p.nasc||'',p.sexo||'',p.cns||'',p.risco||'',p.queixa||'',STATUS[p.status]||p.status,p.medicoNome||'',fmtDH(p.inicioAtend),fmtDH(p.saida),(p.atendimento||{}).hd||'',(p.conduta||{}).texto||''].map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')); const csv='\ufeff'+h.join(';')+'\n'+rows.join('\n'); const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='atendimentos_'+fmtData(now()).replace(/\//g,'-')+'.csv'; a.click(); }
 
 /* =====================================================================
    IMPRESSÃO
@@ -1223,13 +1275,13 @@ function imprimirFicha(id){ const p=S.pacientes[id], t=p.triagem||{}, a=p.atendi
    ===================================================================== */
 function vAdmin(){
   const t=S.adminTab;
-  const tabs=[['usuarios','Usuários'],['meds','Medicamentos'],['exames','Exames'],['unidade','Unidade']];
+  const tabs=[['usuarios','Usuários'],['meds','Medicamentos'],['exames','Exames'],['unidade','Unidade'],['backup','Backup e LGPD']];
   return `<div class="page-h"><div><h1>Administração</h1><p>${unidade().nome}</p></div></div>
-  <div class="card"><div class="tabs">${tabs.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="S.adminTab='${k}';render()">${l}</button>`).join('')}</div><div class="bd">${({usuarios:admUsuarios, meds:admMeds, exames:admExames, unidade:admUnidade})[t]()}</div></div>`;
+  <div class="card"><div class="tabs">${tabs.map(([k,l])=>`<button class="${t===k?'on':''}" onclick="S.adminTab='${k}';render()">${l}</button>`).join('')}</div><div class="bd">${({usuarios:admUsuarios, meds:admMeds, exames:admExames, unidade:admUnidade, backup:admBackup})[t]()}</div></div>`;
 }
 function admUsuarios(){
   const U = Object.entries(S.usuarios).map(([id,u])=>({id,...u})).sort((a,b)=>(a.aprovado?1:0)-(b.aprovado?1:0)||a.nome.localeCompare(b.nome));
-  return `<div style="overflow:auto"><table class="tb"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Registro</th><th>Situação</th><th></th></tr></thead><tbody>${U.map(u=>`<tr><td><b>${esc(u.nome)}</b>${u.admin?' <span class="tag acc">admin</span>':''}</td><td>${esc(u.usuario)}</td><td><select onchange="DB.update('usuarios/${u.id}',{perfil:this.value})" ${u.id===S.me.id?'disabled':''}>${Object.entries(PERFIS).filter(([k])=>k!=='admin').map(([k,v])=>`<option value="${k}" ${u.perfil===k?'selected':''}>${v}</option>`).join('')}</select></td><td>${esc(u.registro||'—')}</td><td>${u.aprovado?'<span class="tag ok">Ativo</span>':'<span class="tag warn">Pendente</span>'}</td><td style="white-space:nowrap">${!u.aprovado?`<button class="btn ok xs" onclick="DB.update('usuarios/${u.id}',{aprovado:true});toast('Aprovado','ok')">Aprovar</button> `:''}${u.id!==S.me.id?`<button class="btn ghost xs" onclick="DB.update('usuarios/${u.id}',{admin:${!u.admin}})">${u.admin?'Tirar admin':'Tornar admin'}</button> <button class="btn ghost xs" onclick="if(confirm('Remover acesso de ${esc(u.nome)}?'))DB.remove('usuarios/${u.id}')">✕</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;
+  return `<div style="overflow:auto"><table class="tb"><thead><tr><th>Nome</th><th>Usuário</th><th>Perfil</th><th>Registro</th><th>Situação</th><th></th></tr></thead><tbody>${U.map(u=>`<tr><td><b>${esc(u.nome)}</b>${u.admin?' <span class="tag acc">admin</span>':''}</td><td>${esc(u.usuario)}</td><td><select onchange="DB.update('usuarios/${u.id}',{perfil:this.value})" ${u.id===S.me.id?'disabled':''}>${Object.entries(PERFIS).filter(([k])=>k!=='admin').map(([k,v])=>`<option value="${k}" ${u.perfil===k?'selected':''}>${v}</option>`).join('')}</select></td><td>${esc(u.registro||'—')}</td><td>${u.aprovado?'<span class="tag ok">Ativo</span>':'<span class="tag warn">Pendente</span>'}</td><td style="white-space:nowrap">${!u.aprovado?`<button class="btn ok xs" onclick="DB.update('usuarios/${u.id}',{aprovado:true});toast('Aprovado','ok')">Aprovar</button> `:''}${u.id!==S.me.id?`<button class="btn ghost xs" onclick="DB.update('usuarios/${u.id}',{admin:${!u.admin}})">${u.admin?'Tirar admin':'Tornar admin'}</button> <button class="btn ghost xs" onclick="pedirSenhaAdmin('Remover o acesso de ${esc(u.nome)}.',()=>{DB.remove('usuarios/${u.id}');toast('Acesso removido','ok')})">✕</button>`:''}</td></tr>`).join('')}</tbody></table></div>`;
 }
 function admMeds(){
   const M = medsCat().sort((a,b)=>a.nome.localeCompare(b.nome));
@@ -1242,15 +1294,36 @@ function admMeds(){
       <button class="btn primary" onclick="addMed()">Adicionar</button></div></div></div>
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input placeholder="filtrar…" value="${esc(S.medQ)}" oninput="S.medQ=this.value;render()" style="height:38px;padding:0 12px;border:1px solid var(--border);border-radius:10px;background:var(--input);flex:1;min-width:180px"><span class="hint">${M.length} no catálogo · ${M.filter(m=>m.ativo!==false).length} disponíveis · ${X.length} adicionados pela equipe</span><button class="btn ghost sm" onclick="if(confirm('Recarregar a lista padrão? Itens editados serão sobrescritos.'))seedPadrao().then(()=>toast('Lista padrão carregada','ok'))">Restaurar padrão</button></div>
     ${X.length?`<div class="card"><div class="hd"><h3>Adicionados pela equipe (★)</h3><span class="hint">use "Promover" para levar ao catálogo oficial</span></div><div class="bd chips">${X.map(m=>`<span class="chip sm">${esc(m.nome)}${m.dose?' · '+esc(m.dose):''} <small style="color:var(--mute)">${esc(m.por||'')}</small> <button title="Promover ao catálogo" onclick="promoverMed('${m.k}')" style="color:var(--ok)">↑</button><button onclick="if(confirm('Excluir?'))DB.remove('modelos/medicamentos/${m.k}')" style="color:var(--bad)">✕</button></span>`).join('')}</div></div>`:''}
-    <div style="overflow:auto"><table class="tb"><thead><tr><th>Medicamento</th><th>Apresentação</th><th>Via</th><th>Dose</th><th>Disponível</th><th></th></tr></thead><tbody>${F.map(m=>`<tr style="${m.ativo===false?'opacity:.5':''}"><td><b>${esc(m.nome)}</b></td><td>${esc(m.apr||'')}</td><td>${esc(m.via||'')}</td><td>${esc(m.dose||'')}</td><td>${m.embutido?'<span class="tag ok">Padrão</span>':`<button class="btn ${m.ativo===false?'ghost':'ok'} xs" onclick="DB.update('config/medicamentos/${m.k}',{ativo:${m.ativo===false}})">${m.ativo===false?'Indisponível':'Disponível'}</button>`}</td><td>${m.embutido?'':`<button class="btn ghost xs" onclick="if(confirm('Excluir ${esc(m.nome)}?'))DB.remove('config/medicamentos/${m.k}')">✕</button>`}</td></tr>`).join('')}</tbody></table></div></div>`;
+    <div style="overflow:auto"><table class="tb"><thead><tr><th>Medicamento</th><th>Apresentação</th><th>Via</th><th>Dose</th><th>Disponível</th><th></th></tr></thead><tbody>${F.map(m=>`<tr style="${m.ativo===false?'opacity:.5':''}"><td><b>${esc(m.nome)}</b></td><td>${esc(m.apr||'')}</td><td>${esc(m.via||'')}</td><td>${esc(m.dose||'')}</td><td>${m.embutido?'<span class="tag ok">Padrão</span>':`<button class="btn ${m.ativo===false?'ghost':'ok'} xs" onclick="DB.update('config/medicamentos/${m.k}',{ativo:${m.ativo===false}})">${m.ativo===false?'Indisponível':'Disponível'}</button>`}</td><td>${m.embutido?'':`<button class="btn ghost xs" onclick="pedirSenhaAdmin('Excluir ${esc(m.nome)} do catálogo.',()=>{DB.remove('config/medicamentos/${m.k}');toast('Excluído','ok')})">✕</button>`}</td></tr>`).join('')}</tbody></table></div></div>`;
 }
 async function promoverMed(k){ const m=S.modelos.medicamentos[k]; if(!m) return; await DB.push('config/medicamentos',{nome:m.nome, apr:m.apr||'', via:m.via||'VO', dose:m.dose||'', ativo:true}); await DB.remove('modelos/medicamentos/'+k); toast('Promovido ao catálogo','ok'); }
 async function addMed(){ const n=$('#mNome').value.trim(); if(!n) return toast('Informe o nome','bad'); await DB.push('config/medicamentos',{nome:n, apr:$('#mApr').value.trim(), via:$('#mVia').value, dose:$('#mDose').value.trim(), ativo:true}); toast('Medicamento adicionado','ok'); }
 function admExames(){
-  const bloco=(key,titulo)=>{ const L=vals(cfg()[key]).sort((a,b)=>a.nome.localeCompare(b.nome)); return `<div class="card"><div class="hd"><h3>${titulo}</h3><span class="hint">${L.length}</span></div><div class="bd stack"><div class="row" style="grid-template-columns:1fr auto;align-items:end"><div class="field"><label for="${key}Novo">Novo exame</label><input id="${key}Novo"></div><button class="btn primary sm" onclick="addExameCat('${key}')">Adicionar</button></div><div class="chips">${L.map(e=>`<span class="chip sm" style="${e.ativo===false?'opacity:.5':''}">${esc(e.nome)} <button onclick="DB.update('config/${key}/${e.k}',{ativo:${e.ativo===false}})" title="${e.ativo===false?'Ativar':'Desativar'}" style="color:var(--mute)">${e.ativo===false?'○':'●'}</button><button onclick="if(confirm('Excluir?'))DB.remove('config/${key}/${e.k}')" style="color:var(--bad)">✕</button></span>`).join('')}</div></div></div>`; };
+  const bloco=(key,titulo)=>{ const L=vals(cfg()[key]).sort((a,b)=>a.nome.localeCompare(b.nome)); return `<div class="card"><div class="hd"><h3>${titulo}</h3><span class="hint">${L.length}</span></div><div class="bd stack"><div class="row" style="grid-template-columns:1fr auto;align-items:end"><div class="field"><label for="${key}Novo">Novo exame</label><input id="${key}Novo"></div><button class="btn primary sm" onclick="addExameCat('${key}')">Adicionar</button></div><div class="chips">${L.map(e=>`<span class="chip sm" style="${e.ativo===false?'opacity:.5':''}">${esc(e.nome)} <button onclick="DB.update('config/${key}/${e.k}',{ativo:${e.ativo===false}})" title="${e.ativo===false?'Ativar':'Desativar'}" style="color:var(--mute)">${e.ativo===false?'○':'●'}</button><button onclick="pedirSenhaAdmin('Excluir ${esc(e.nome)}.',()=>DB.remove('config/${key}/${e.k}'))" style="color:var(--bad)">✕</button></span>`).join('')}</div></div></div>`; };
   return `<div class="two">${bloco('examesLab','Laboratório')}${bloco('examesImg','Imagem / ECG')}</div>`;
 }
 async function addExameCat(key){ const n=$('#'+key+'Novo').value.trim(); if(!n) return; await DB.push('config/'+key,{nome:n,ativo:true}); toast('Adicionado','ok'); }
+function admBackup(){ const S2 = vals(S.sessoes||{});
+  return `<div class="stack" style="max-width:640px">
+  <div class="card"><div class="hd"><h3>Backup do sistema</h3></div><div class="bd stack">
+    <p class="hint" style="margin:0">Baixa todos os atendimentos, usuários e configurações em um arquivo. Guarde em local seguro — é a cópia de segurança do prontuário.</p>
+    <div class="chips"><button class="btn primary sm" onclick="backupJSON()">Baixar backup completo (JSON)</button><button class="btn ghost sm" onclick="backupCSVTudo()">Baixar atendimentos (CSV)</button></div>
+    <p class="hint" style="margin:0">Último backup nesta máquina: ${localStorage.getItem('gsaude_bkp')?fmtDH(+localStorage.getItem('gsaude_bkp')):'nunca'}</p>
+  </div></div>
+  <div class="card"><div class="hd"><h3>Sessões ativas</h3><span class="hint">1 dispositivo por usuário</span></div><div class="bd stack">
+    ${S2.length?S2.map(x=>{const u=S.usuarios[x.k]; return `<div class="rx"><div class="t"><b>${esc(u?u.nome:x.k)}</b><small>desde ${fmtDH(x.t)} · ${esc((x.disp||'').slice(0,60))}</small></div><button class="btn ghost xs" onclick="DB.remove('sessoes/${x.k}');toast('Sessão encerrada','ok')">Encerrar</button></div>`;}).join(''):'<span class="hint">Nenhuma sessão registrada</span>'}
+  </div></div>
+  <div class="card"><div class="hd"><h3>Proteção de dados</h3></div><div class="bd" style="font-size:14px;line-height:1.6">
+    <p style="margin:0 0 8px">Cada profissional tem login próprio e a conta só funciona em um dispositivo por vez. Toda abertura de ficha e cada ação clínica ficam registradas na aba <b>Acessos</b> do atendimento, com nome, perfil e horário.</p>
+    <p style="margin:0 0 8px">Exclusões de itens do prontuário, de usuários e do catálogo exigem confirmação com usuário e senha de administrador, e a exclusão fica registrada na linha do tempo do paciente.</p>
+    <p style="margin:0">Permissões: triagem, checagem de medicação e de coleta apenas para enfermagem; atendimento, prescrição e conduta apenas para médicos; execução e laudo de imagem apenas para radiologia; liberação de laboratório apenas para laboratório/enfermagem.</p>
+  </div></div></div>`; }
+async function backupJSON(){ const [pac,us,cf,mo,ct] = await Promise.all([DB.buscaTudo('pacientes'),DB.once('usuarios'),DB.once('config'),DB.once('modelos'),DB.once('contador')]);
+  Object.values(us||{}).forEach(u=>delete u.senha);
+  const d = { gerado: new Date().toISOString(), por: S.me.nome, unidade: unidade(), pacientes: pac, usuarios: us, config: cf, modelos: mo, contador: ct };
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(d,null,1)],{type:'application/json'})); a.download='backup_upa_'+fmtData(now()).replace(/\//g,'-')+'.json'; a.click();
+  localStorage.setItem('gsaude_bkp', String(now())); toast('Backup gerado','ok'); render(); }
+async function backupCSVTudo(){ const pac = await DB.buscaTudo('pacientes')||{}; exportCSV(Object.entries(pac).map(([k,v])=>({id:k,...v}))); }
 function admUnidade(){ const u=unidade(), s=setores();
   return `<div class="stack" style="max-width:560px">
     <div class="row"><div class="field"><label for="uCod">Código CNES</label><input id="uCod" value="${esc(u.codigo)}"></div><div class="field"><label for="uNome">Nome da unidade</label><input id="uNome" value="${esc(u.nome)}"></div></div>
